@@ -146,16 +146,16 @@ async def _dispatch(run: "AgentRun", agent: "BaseAgent", name: str, args: dict[s
             builds_on=list(args.get("builds_on") or []),
         )
         return f"Recorded {f.id} (confidence {f.confidence:.2f}, {len(f.evidence.nodes)} nodes)."
-    if name not in agent.tools:
+    if name not in agent.available_tools():
         raise ValueError(f"unknown tool {name!r}")
     return tool_result_text(await run.query(name, args))
 
 
 async def tool_loop(run: "AgentRun", agent: "BaseAgent", prior: list[Finding]) -> None:
     s = get_settings()
-    tools = [catalog_tool(t) for t in agent.tools] + [RECORD_FINDING_TOOL]
+    tools = [catalog_tool(t) for t in agent.available_tools()] + [RECORD_FINDING_TOOL]
     system = PREAMBLE + "\n" + agent.system
-    messages: list[dict] = [{"role": "user", "content": agent.task(run.ctx, prior)}]
+    messages: list[dict] = [{"role": "user", "content": agent.task(run, prior)}]
 
     for _ in range(s.agent_max_steps):
         resp = await create(run.ctx.llm, system=system, tools=tools, messages=messages)
