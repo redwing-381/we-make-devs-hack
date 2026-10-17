@@ -1,0 +1,867 @@
+{
+ "nodes": {
+  "Team": [
+   {
+    "id": "team:payments",
+    "name": "Payments"
+   },
+   {
+    "id": "team:checkout",
+    "name": "Checkout"
+   },
+   {
+    "id": "team:catalog",
+    "name": "Catalog"
+   },
+   {
+    "id": "team:platform",
+    "name": "Platform"
+   },
+   {
+    "id": "team:data",
+    "name": "Data"
+   },
+   {
+    "id": "team:growth",
+    "name": "Growth"
+   }
+  ],
+  "Engineer": [
+   {
+    "id": "eng:priya",
+    "name": "Priya Raman",
+    "handle": "priya",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:arjun",
+    "name": "Arjun Mehta",
+    "handle": "arjun",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:meera",
+    "name": "Meera Iyer",
+    "handle": "meera",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:karthik",
+    "name": "Karthik Subramanian",
+    "handle": "karthik",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:divya",
+    "name": "Divya Nair",
+    "handle": "divya",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:rahul",
+    "name": "Rahul Verma",
+    "handle": "rahul",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:sneha",
+    "name": "Sneha Kulkarni",
+    "handle": "sneha",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:vikram",
+    "name": "Vikram Rao",
+    "handle": "vikram",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:ananya",
+    "name": "Ananya Das",
+    "handle": "ananya",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:rohan",
+    "name": "Rohan Gupta",
+    "handle": "rohan",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:lakshmi",
+    "name": "Lakshmi Krishnan",
+    "handle": "lakshmi",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:siddharth",
+    "name": "Siddharth Jain",
+    "handle": "siddharth",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:kavya",
+    "name": "Kavya Reddy",
+    "handle": "kavya",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:aditya",
+    "name": "Aditya Bose",
+    "handle": "aditya",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:nisha",
+    "name": "Nisha Pillai",
+    "handle": "nisha",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:farhan",
+    "name": "Farhan Sheikh",
+    "handle": "farhan",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:deepa",
+    "name": "Deepa Menon",
+    "handle": "deepa",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:tom",
+    "name": "Tom Becker",
+    "handle": "tom",
+    "kind": "human",
+    "on_call": true
+   },
+   {
+    "id": "eng:maria",
+    "name": "Maria Lopez",
+    "handle": "maria",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:li",
+    "name": "Li Wei",
+    "handle": "li",
+    "kind": "human",
+    "on_call": false
+   },
+   {
+    "id": "eng:coder-bot",
+    "name": "coder-bot (SDE agent)",
+    "handle": "coder-bot",
+    "kind": "agent",
+    "on_call": false
+   },
+   {
+    "id": "eng:deps-bot",
+    "name": "deps-bot (dependency agent)",
+    "handle": "deps-bot",
+    "kind": "agent",
+    "on_call": false
+   }
+  ],
+  "Service": [
+   {
+    "id": "svc:frontend",
+    "name": "frontend",
+    "tier": "edge",
+    "lang": "typescript"
+   },
+   {
+    "id": "svc:checkout",
+    "name": "checkout",
+    "tier": "core",
+    "lang": "go"
+   },
+   {
+    "id": "svc:payment",
+    "name": "payment",
+    "tier": "core",
+    "lang": "javascript"
+   },
+   {
+    "id": "svc:cart",
+    "name": "cart",
+    "tier": "core",
+    "lang": "csharp"
+   },
+   {
+    "id": "svc:currency",
+    "name": "currency",
+    "tier": "core",
+    "lang": "cpp"
+   },
+   {
+    "id": "svc:product-catalog",
+    "name": "product-catalog",
+    "tier": "core",
+    "lang": "go"
+   },
+   {
+    "id": "svc:recommendation",
+    "name": "recommendation",
+    "tier": "core",
+    "lang": "python"
+   },
+   {
+    "id": "svc:shipping",
+    "name": "shipping",
+    "tier": "core",
+    "lang": "rust"
+   },
+   {
+    "id": "svc:quote",
+    "name": "quote",
+    "tier": "core",
+    "lang": "php"
+   },
+   {
+    "id": "svc:accounting",
+    "name": "accounting",
+    "tier": "core",
+    "lang": "dotnet",
+    "peak_concurrency": 16
+   },
+   {
+    "id": "svc:fraud-detection",
+    "name": "fraud-detection",
+    "tier": "core",
+    "lang": "kotlin",
+    "peak_concurrency": 12
+   }
+  ],
+  "Topic": [
+   {
+    "id": "topic:orders",
+    "name": "orders"
+   }
+  ],
+  "File": [
+   {
+    "id": "file:config/services.yaml",
+    "name": "config/services.yaml",
+    "path": "config/services.yaml"
+   }
+  ],
+  "ConfigKey": [
+   {
+    "id": "cfg:frontend.timeouts_ms.cart",
+    "name": "frontend timeouts_ms.cart",
+    "service": "frontend",
+    "key": "timeouts_ms.cart",
+    "kind": "timeout",
+    "value": 300
+   },
+   {
+    "id": "cfg:frontend.timeouts_ms.currency",
+    "name": "frontend timeouts_ms.currency",
+    "service": "frontend",
+    "key": "timeouts_ms.currency",
+    "kind": "timeout",
+    "value": 300
+   },
+   {
+    "id": "cfg:frontend.timeouts_ms.checkout",
+    "name": "frontend timeouts_ms.checkout",
+    "service": "frontend",
+    "key": "timeouts_ms.checkout",
+    "kind": "timeout",
+    "value": 2500
+   },
+   {
+    "id": "cfg:frontend.timeouts_ms.shipping",
+    "name": "frontend timeouts_ms.shipping",
+    "service": "frontend",
+    "key": "timeouts_ms.shipping",
+    "kind": "timeout",
+    "value": 1500
+   },
+   {
+    "id": "cfg:frontend.timeouts_ms.product-catalog",
+    "name": "frontend timeouts_ms.product-catalog",
+    "service": "frontend",
+    "key": "timeouts_ms.product-catalog",
+    "kind": "timeout",
+    "value": 500
+   },
+   {
+    "id": "cfg:frontend.timeouts_ms.recommendation",
+    "name": "frontend timeouts_ms.recommendation",
+    "service": "frontend",
+    "key": "timeouts_ms.recommendation",
+    "kind": "timeout",
+    "value": 1000
+   },
+   {
+    "id": "cfg:checkout.timeouts_ms.cart",
+    "name": "checkout timeouts_ms.cart",
+    "service": "checkout",
+    "key": "timeouts_ms.cart",
+    "kind": "timeout",
+    "value": 300
+   },
+   {
+    "id": "cfg:checkout.timeouts_ms.currency",
+    "name": "checkout timeouts_ms.currency",
+    "service": "checkout",
+    "key": "timeouts_ms.currency",
+    "kind": "timeout",
+    "value": 300
+   },
+   {
+    "id": "cfg:checkout.timeouts_ms.payment",
+    "name": "checkout timeouts_ms.payment",
+    "service": "checkout",
+    "key": "timeouts_ms.payment",
+    "kind": "timeout",
+    "value": 800
+   },
+   {
+    "id": "cfg:checkout.timeouts_ms.product-catalog",
+    "name": "checkout timeouts_ms.product-catalog",
+    "service": "checkout",
+    "key": "timeouts_ms.product-catalog",
+    "kind": "timeout",
+    "value": 500
+   },
+   {
+    "id": "cfg:checkout.timeouts_ms.shipping",
+    "name": "checkout timeouts_ms.shipping",
+    "service": "checkout",
+    "key": "timeouts_ms.shipping",
+    "kind": "timeout",
+    "value": 1500
+   },
+   {
+    "id": "cfg:shipping.timeouts_ms.quote",
+    "name": "shipping timeouts_ms.quote",
+    "service": "shipping",
+    "key": "timeouts_ms.quote",
+    "kind": "timeout",
+    "value": 600
+   },
+   {
+    "id": "cfg:recommendation.timeouts_ms.product-catalog",
+    "name": "recommendation timeouts_ms.product-catalog",
+    "service": "recommendation",
+    "key": "timeouts_ms.product-catalog",
+    "kind": "timeout",
+    "value": 400
+   }
+  ]
+ },
+ "rels": [
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:priya",
+   "dst": "team:payments",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:arjun",
+   "dst": "team:payments",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:meera",
+   "dst": "team:payments",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:karthik",
+   "dst": "team:checkout",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:divya",
+   "dst": "team:checkout",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:rahul",
+   "dst": "team:checkout",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:sneha",
+   "dst": "team:checkout",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:vikram",
+   "dst": "team:catalog",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:ananya",
+   "dst": "team:catalog",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:rohan",
+   "dst": "team:catalog",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:lakshmi",
+   "dst": "team:platform",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:siddharth",
+   "dst": "team:platform",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:kavya",
+   "dst": "team:platform",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:aditya",
+   "dst": "team:platform",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:nisha",
+   "dst": "team:data",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:farhan",
+   "dst": "team:data",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:deepa",
+   "dst": "team:data",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:tom",
+   "dst": "team:growth",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:maria",
+   "dst": "team:growth",
+   "props": {}
+  },
+  {
+   "type": "MEMBER_OF",
+   "src": "eng:li",
+   "dst": "team:growth",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:checkout",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:payments",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:payments",
+   "dst": "svc:payment",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:checkout",
+   "dst": "svc:cart",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:checkout",
+   "dst": "svc:currency",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:catalog",
+   "dst": "svc:product-catalog",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:catalog",
+   "dst": "svc:recommendation",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:checkout",
+   "dst": "svc:shipping",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:checkout",
+   "dst": "svc:quote",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:data",
+   "dst": "svc:accounting",
+   "props": {}
+  },
+  {
+   "type": "OWNS",
+   "src": "team:payments",
+   "dst": "svc:fraud-detection",
+   "props": {}
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:cart",
+   "props": {
+    "p99_ms": 25,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:currency",
+   "props": {
+    "p99_ms": 17,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:checkout",
+   "props": {
+    "p99_ms": 480,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:shipping",
+   "props": {
+    "p99_ms": 340,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:product-catalog",
+   "props": {
+    "p99_ms": 150,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:frontend",
+   "dst": "svc:recommendation",
+   "props": {
+    "p99_ms": 200,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:checkout",
+   "dst": "svc:cart",
+   "props": {
+    "p99_ms": 25,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:checkout",
+   "dst": "svc:currency",
+   "props": {
+    "p99_ms": 17,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:checkout",
+   "dst": "svc:payment",
+   "props": {
+    "p99_ms": 450,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:checkout",
+   "dst": "svc:product-catalog",
+   "props": {
+    "p99_ms": 150,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:checkout",
+   "dst": "svc:shipping",
+   "props": {
+    "p99_ms": 340,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:shipping",
+   "dst": "svc:quote",
+   "props": {
+    "p99_ms": 300,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "CALLS",
+   "src": "svc:recommendation",
+   "dst": "svc:product-catalog",
+   "props": {
+    "p99_ms": 150,
+    "error_rate": 0.002,
+    "updated_at": 1792297200000
+   }
+  },
+  {
+   "type": "PUBLISHES",
+   "src": "svc:checkout",
+   "dst": "topic:orders",
+   "props": {}
+  },
+  {
+   "type": "CONSUMES",
+   "src": "svc:accounting",
+   "dst": "topic:orders",
+   "props": {}
+  },
+  {
+   "type": "CONSUMES",
+   "src": "svc:fraud-detection",
+   "dst": "topic:orders",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.cart",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.cart",
+   "dst": "svc:cart",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.currency",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.currency",
+   "dst": "svc:currency",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.checkout",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.checkout",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.shipping",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.shipping",
+   "dst": "svc:shipping",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.product-catalog",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.product-catalog",
+   "dst": "svc:product-catalog",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:frontend.timeouts_ms.recommendation",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:frontend.timeouts_ms.recommendation",
+   "dst": "svc:recommendation",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:checkout.timeouts_ms.cart",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:checkout.timeouts_ms.cart",
+   "dst": "svc:cart",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:checkout.timeouts_ms.currency",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:checkout.timeouts_ms.currency",
+   "dst": "svc:currency",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:checkout.timeouts_ms.payment",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:checkout.timeouts_ms.payment",
+   "dst": "svc:payment",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:checkout.timeouts_ms.product-catalog",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:checkout.timeouts_ms.product-catalog",
+   "dst": "svc:product-catalog",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:checkout.timeouts_ms.shipping",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:checkout.timeouts_ms.shipping",
+   "dst": "svc:shipping",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:shipping.timeouts_ms.quote",
+   "dst": "svc:shipping",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:shipping.timeouts_ms.quote",
+   "dst": "svc:quote",
+   "props": {}
+  },
+  {
+   "type": "CONFIGURES",
+   "src": "cfg:recommendation.timeouts_ms.product-catalog",
+   "dst": "svc:recommendation",
+   "props": {}
+  },
+  {
+   "type": "TARGETS",
+   "src": "cfg:recommendation.timeouts_ms.product-catalog",
+   "dst": "svc:product-catalog",
+   "props": {}
+  }
+ ]
+}

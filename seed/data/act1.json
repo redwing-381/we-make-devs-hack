@@ -1,0 +1,251 @@
+{
+ "nodes": {
+  "Commit": [
+   {
+    "id": "commit:9f2c1ab",
+    "name": "9f2c1ab lower payment timeout",
+    "sha": "9f2c1ab",
+    "message": "perf(checkout): lower payment timeout to 200ms to cut checkout latency",
+    "ts": 1792297260000
+   },
+   {
+    "id": "commit:3e81d07",
+    "name": "3e81d07 cart: show saved-for-later count",
+    "sha": "3e81d07",
+    "message": "cart: show saved-for-later count",
+    "ts": 1792294500000
+   },
+   {
+    "id": "commit:c47a9e2",
+    "name": "c47a9e2 product-catalog: add index hint for cate",
+    "sha": "c47a9e2",
+    "message": "product-catalog: add index hint for category query",
+    "ts": 1792295280000
+   }
+  ],
+  "ConfigKey": [
+   {
+    "id": "cfg:checkout.timeouts_ms.payment",
+    "value": 200
+   }
+  ],
+  "PR": [
+   {
+    "id": "pr:12",
+    "name": "#12 Reduce checkout latency",
+    "number": 12,
+    "title": "Reduce checkout latency",
+    "state": "merged",
+    "opened_at": 1792297320000,
+    "merged_at": 1792297500000,
+    "author": "coder-bot",
+    "url": "https://github.com/redwing-381/astro-mini/pull/12"
+   },
+   {
+    "id": "pr:1298",
+    "name": "#1298 cart: show saved-for-later count",
+    "number": 1298,
+    "title": "cart: show saved-for-later count",
+    "state": "merged",
+    "opened_at": 1792294800000,
+    "merged_at": 1792296060000,
+    "author": "divya"
+   },
+   {
+    "id": "pr:1299",
+    "name": "#1299 product-catalog: add index hint for category query",
+    "number": 1299,
+    "title": "product-catalog: add index hint for category query",
+    "state": "merged",
+    "opened_at": 1792295580000,
+    "merged_at": 1792296840000,
+    "author": "vikram"
+   }
+  ],
+  "Deploy": [
+   {
+    "id": "deploy:d-311",
+    "name": "d-311",
+    "ts": 1792297620000,
+    "sha": "9f2c1ab",
+    "status": "succeeded"
+   },
+   {
+    "id": "deploy:d-309",
+    "name": "d-309",
+    "ts": 1792296300000,
+    "sha": "3e81d07",
+    "status": "succeeded"
+   },
+   {
+    "id": "deploy:d-310",
+    "name": "d-310",
+    "ts": 1792297080000,
+    "sha": "c47a9e2",
+    "status": "succeeded"
+   }
+  ],
+  "Incident": [
+   {
+    "id": "inc:INC-1031",
+    "name": "INC-1031",
+    "title": "checkout 5xx spike",
+    "summary": "checkout returning 5xx for 62% of requests since 10:00 IST, frontend 41%. payment, cart and currency look healthy.",
+    "status": "open",
+    "severity": "sev2",
+    "started_at": 1792297800000
+   }
+  ],
+  "Alert": [
+   {
+    "id": "alert:a-901",
+    "name": "a-901 checkout error_rate 62%",
+    "ts": 1792297800000,
+    "signal": "error_rate",
+    "value": 0.62,
+    "threshold": 0.1,
+    "severity": "sev2",
+    "incident_id": "INC-1031",
+    "source": "watcher"
+   },
+   {
+    "id": "alert:a-902",
+    "name": "a-902 frontend error_rate 41%",
+    "ts": 1792297804000,
+    "signal": "error_rate",
+    "value": 0.41,
+    "threshold": 0.1,
+    "severity": "sev2",
+    "incident_id": "INC-1031",
+    "source": "watcher"
+   }
+  ]
+ },
+ "rels": [
+  {
+   "type": "AUTHORED_BY",
+   "src": "commit:9f2c1ab",
+   "dst": "eng:coder-bot",
+   "props": {}
+  },
+  {
+   "type": "TOUCHES",
+   "src": "commit:9f2c1ab",
+   "dst": "file:config/services.yaml",
+   "props": {}
+  },
+  {
+   "type": "CHANGES",
+   "src": "commit:9f2c1ab",
+   "dst": "cfg:checkout.timeouts_ms.payment",
+   "props": {
+    "old": 800,
+    "new": 200,
+    "ts": 1792297260000,
+    "callee_p99_at_change": 450
+   }
+  },
+  {
+   "type": "CONTAINS",
+   "src": "pr:12",
+   "dst": "commit:9f2c1ab",
+   "props": {}
+  },
+  {
+   "type": "SHIPS",
+   "src": "deploy:d-311",
+   "dst": "commit:9f2c1ab",
+   "props": {}
+  },
+  {
+   "type": "OF",
+   "src": "deploy:d-311",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "AUTHORED_BY",
+   "src": "commit:3e81d07",
+   "dst": "eng:divya",
+   "props": {}
+  },
+  {
+   "type": "CONTAINS",
+   "src": "pr:1298",
+   "dst": "commit:3e81d07",
+   "props": {}
+  },
+  {
+   "type": "SHIPS",
+   "src": "deploy:d-309",
+   "dst": "commit:3e81d07",
+   "props": {}
+  },
+  {
+   "type": "OF",
+   "src": "deploy:d-309",
+   "dst": "svc:cart",
+   "props": {}
+  },
+  {
+   "type": "AUTHORED_BY",
+   "src": "commit:c47a9e2",
+   "dst": "eng:vikram",
+   "props": {}
+  },
+  {
+   "type": "CONTAINS",
+   "src": "pr:1299",
+   "dst": "commit:c47a9e2",
+   "props": {}
+  },
+  {
+   "type": "SHIPS",
+   "src": "deploy:d-310",
+   "dst": "commit:c47a9e2",
+   "props": {}
+  },
+  {
+   "type": "OF",
+   "src": "deploy:d-310",
+   "dst": "svc:product-catalog",
+   "props": {}
+  },
+  {
+   "type": "FIRED_ON",
+   "src": "alert:a-901",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "TRIGGERED_BY",
+   "src": "inc:INC-1031",
+   "dst": "alert:a-901",
+   "props": {}
+  },
+  {
+   "type": "IMPACTED",
+   "src": "inc:INC-1031",
+   "dst": "svc:checkout",
+   "props": {}
+  },
+  {
+   "type": "FIRED_ON",
+   "src": "alert:a-902",
+   "dst": "svc:frontend",
+   "props": {}
+  },
+  {
+   "type": "TRIGGERED_BY",
+   "src": "inc:INC-1031",
+   "dst": "alert:a-902",
+   "props": {}
+  },
+  {
+   "type": "IMPACTED",
+   "src": "inc:INC-1031",
+   "dst": "svc:frontend",
+   "props": {}
+  }
+ ]
+}
