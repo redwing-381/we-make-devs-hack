@@ -42,6 +42,9 @@ The stream is served at:
 Every SSE `data:` line is one `AgentEvent`. The live stream replays the history first, then follows until the
 investigation finishes and sends `event: end`; add `?follow=false` to get only the history.
 `POST /api/incidents/{id}/investigate` re-runs the agents on an existing incident.
+`POST /api/incidents/{id}/resolve` with `{fix, cause_finding_id?, resolved_by?}` confirms the root cause
+(default: Cause's root-cause finding), closes the incident (`CAUSED_BY`, `RESOLVED`) and, once F-A3 lands,
+has Memory write the lesson; it returns `{root_cause_finding_id, caused_by, lesson, lesson_pending}`.
 
 Live events are also written to `scenarios/recordings/live/<incident>.jsonl` and are reloaded after an API
 restart. Live runs also append each event to a JSONL file. That is how
@@ -60,7 +63,7 @@ restart. Live runs also append each event to a JSONL file. That is how
 | `agent.finding` | any | `{finding: Finding}` |
 | `agent.handoff` | from-agent | `{to, finding_ids}` |
 | `agent.done` | any | `{summary, error?}`: `error: true` if the agent crashed (the investigation carries on) |
-| `incident.resolved` | orchestrator | `{root_cause_finding_id, fix}` |
+| `incident.resolved` | orchestrator | `{root_cause_finding_id, fix, caused_by, lesson_pending}` |
 | `memory.lesson_written` | memory | `{lesson: {id, text, confidence}, detector: {id, template, backtest_hits, backtest_total}, evidence: Subgraph}` |
 | `guard.checked` | guard | `ChangeRiskResponse` |
 
