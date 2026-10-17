@@ -32,6 +32,10 @@ deploy, commit = n("Deploy", "deploy:9f2c1ab"), n("Commit", "commit:9f2c1ab")
 bot = n("Engineer", "eng:coder-bot", kind="agent")
 key = n("ConfigKey", "cfg:checkout.timeouts_ms.payment", kind="timeout")
 
+incident, past = n("Incident", "inc:INC-1031"), n("Incident", "inc:INC-0977")
+symptom = n("Feature", "feat:symptom:caller_5xx_callee_healthy")
+team, priya = n("Team", "team:payments"), n("Engineer", "eng:priya", kind="human", on_call=True)
+
 ROWS = {
     "root_alert": (
         ["service", "alert", "path"],
@@ -91,6 +95,37 @@ ROWS = {
                         e(checkout, "CALLS", payment),
                     ],
                 ),
+            ]
+        ],
+    ),
+    "similar_incidents": (
+        ["incident", "jaccard", "shared", "lesson", "fix", "path"],
+        [
+            [
+                "inc:INC-0977",
+                0.31,
+                ["symptom:caller_5xx_callee_healthy"],
+                "lesson:L-7",
+                "add jittered backoff to cart retries",
+                Path(
+                    [incident, symptom, past],
+                    [e(incident, "HAS_FEATURE", symptom), e(past, "HAS_FEATURE", symptom)],
+                ),
+            ]
+        ],
+    ),
+    "who_knows": (
+        ["engineer", "handle", "kind", "on_call", "team", "commits", "resolved", "path"],
+        [
+            [
+                "eng:priya",
+                "priya",
+                "human",
+                True,
+                "payments",
+                4,
+                2,
+                Path([checkout, team, priya], [e(team, "OWNS", checkout), e(priya, "MEMBER_OF", team)]),
             ]
         ],
     ),

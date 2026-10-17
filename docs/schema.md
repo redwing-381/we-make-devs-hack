@@ -206,6 +206,8 @@ carries a human `name` for display, falling back to the id.
 (Decision)-[:FROM]->(Lesson)
 (PR)-[:IMPLEMENTS]->(Decision)
 (Runbook)-[:MENTIONS]->(ConfigKey|Service)
+(ChatMessage)-[:ABOUT]->(Incident)        status updates written by Comms
+(ChatMessage)-[:PAGES]->(Engineer)        who Comms paged
 (Runbook)-[:FOR]->(FailurePattern)
 ```
 

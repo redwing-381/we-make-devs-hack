@@ -126,6 +126,53 @@ class Board:
                 self.graph,
             )
 
+    def write_message(
+        self, incident_id: str, msg_id: str, channel: str, text: str, author: str, pages: list[str]
+    ) -> None:
+        """A status update: ChatMessage -[:ABOUT]-> Incident, -[:PAGES]-> each paged Engineer."""
+        _write(
+            "MATCH (i:Incident {id: $inc}) "
+            "MERGE (m:ChatMessage {id: $id}) "
+            "SET m.name = $channel, m.channel = $channel, m.text = $text, m.author = $author, m.ts = $ts "
+            "MERGE (m)-[:ABOUT]->(i) "
+            "WITH m UNWIND $pages AS eng MATCH (e:Engineer {id: eng}) MERGE (m)-[:PAGES]->(e)",
+            {
+                "inc": f"inc:{incident_id}",
+                "id": msg_id,
+                "channel": channel,
+                "text": text,
+                "author": author,
+                "ts": now_ms(),
+                "pages": pages,
+            },
+            self.graph,
+        )
+
+    def mark_resolved(
+        self, incident_id: str, fix: str, commit_id: str | None, resolved_by: str | None
+    ) -> None:
+        """Incident lifecycle facts: status, CAUSED_BY the guilty commit, RESOLVED by whoever confirmed it."""
+        params = {"inc": f"inc:{incident_id}", "fix": fix, "ts": now_ms(), "commit": commit_id}
+        _write(
+            "MATCH (i:Incident {id: $inc}) SET i.status = 'resolved', i.resolved_at = $ts, i.fix = $fix",
+            params,
+            self.graph,
+        )
+        if commit_id:
+            _write(
+                "MATCH (i:Incident {id: $inc}), (c:Commit {id: $commit}) MERGE (i)-[:CAUSED_BY]->(c)",
+                params,
+                self.graph,
+            )
+        if resolved_by:
+            _write(
+                "MATCH (i:Incident {id: $inc}) MERGE (e:Engineer {id: $eng}) "
+                "ON CREATE SET e.handle = $handle, e.name = $handle, e.kind = 'human' "
+                "MERGE (e)-[:RESOLVED]->(i)",
+                {**params, "eng": f"eng:{resolved_by}", "handle": resolved_by},
+                self.graph,
+            )
+
     def read_findings(self, inv_id: str) -> list[Finding]:
         out = client.run(
             "MATCH (:Investigation {id: $inv})-[:HAS_FINDING]->(f:Finding) "
@@ -175,6 +222,7 @@ class MemoryBoard(Board):
         super().__init__(None)
         self.steps: list[dict] = []
         self.findings: dict[str, list[Finding]] = defaultdict(list)
+        self.messages: list[dict] = []
         self._n: dict[str, int] = defaultdict(int)
 
     def open_investigation(self, incident_id: str, graph_only: bool) -> str:
@@ -189,6 +237,21 @@ class MemoryBoard(Board):
 
     def write_finding(self, inv_id: str, finding: Finding) -> None:
         self.findings[inv_id].append(finding)
+
+    def mark_resolved(self, incident_id, fix, commit_id, resolved_by) -> None:
+        self.resolved = {"incident": incident_id, "fix": fix, "commit": commit_id, "by": resolved_by}
+
+    def write_message(self, incident_id, msg_id, channel, text, author, pages) -> None:
+        self.messages.append(
+            {
+                "incident": incident_id,
+                "id": msg_id,
+                "channel": channel,
+                "text": text,
+                "author": author,
+                "pages": pages,
+            }
+        )
 
     def read_findings(self, inv_id: str) -> list[Finding]:
         return list(self.findings[inv_id])

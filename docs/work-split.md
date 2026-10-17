@@ -205,12 +205,15 @@ plain-English `explain`, and you should run `make docs` afterwards. Start from t
 | `blast_radius` | Q1 | `svc` | One row per hurt service: `service`, `tier`, `hops`, `delayed` (true for async consumers via Topic), `path` |
 | `suspect_changes` | Q2 | `root, alert_ts, window_ms` | Ranked rows, best first: `sha` (as stored on Commit), `message`, `author`, `author_kind`, `service`, `hops`, `mins_before`, `score` (0–1), `path` (Service…Deploy-SHIPS->Commit-AUTHORED_BY->Engineer) |
 | `config_vs_reality` | Q3 | `sha` | `caller`, `callee`, `key`, `old`, `new`, `callee_p99_at_change`, `below_p99`, `path` (Commit-CHANGES->ConfigKey-CONFIGURES->caller-CALLS->callee) |
-| `similar_incidents` | Q4 | `id, q` | Feature-Jaccard rows + vector rows (merged in Python, see F-A3) |
-| `who_knows` | Q5 | `svc` | Ranked engineers with team, on_call, commits and resolved counts |
+| `similar_incidents` | Q4 | `id` | The feature-Jaccard part only (vector similarity is merged in Python by `memory.similarity.similar_incidents`): one row per resolved past incident sharing features: `incident` (id), `jaccard`, `shared` (feature names), `lesson` (id or null), `fix`, `path` (Incident-HAS_FEATURE->Feature<-HAS_FEATURE-past Incident) |
+| `who_knows` | Q5 | `svc` | Ranked, on-call first: `engineer` (id), `handle`, `kind`, `on_call`, `team`, `commits`, `resolved`, `path` (Service<-OWNS-Team<-MEMBER_OF-Engineer) |
 | `guard_timeout_below_p99` | Q6 | `changes` | caller, callee, proposed, p99, `safe_min` |
 
-- **Column names above are what Solai's Triage and Cause agents read** (`whygraph/agents/triage.py`,
-  `cause.py`; the expected rows are mocked in `tests/act1_graph.py`). Keep them, or change both sides in one PR.
+- **Column names above are what Solai's agents read** (`whygraph/agents/triage.py`, `cause.py`,
+  `memory.py`, `comms.py`; the expected rows are mocked in `tests/act1_graph.py`). Keep them, or change both
+  sides in one PR.
+- `extract_features` is called by the Memory agent in **both** passes (and by the orchestrator), so it must be
+  idempotent (MERGE). Memory only cites matches that `similar_incidents` (the catalog query) also returns.
 - **Return paths, not just columns.** The UI and the grounding check need node and edge ids; `client.run()`
   turns paths into a `Subgraph` automatically.
 - **Tests** (`tests/test_queries.py`, `db`-marked) run on the minimal slice in a throwaway graph:
