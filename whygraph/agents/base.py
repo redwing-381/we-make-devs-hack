@@ -237,6 +237,8 @@ class BaseAgent:
                     summary=f"LLM unavailable ({type(e).__name__}); switching to graph-only",
                 )
         if not run.findings:
+            run.scope.pop("final_text", None)  # an answer with no grounded findings doesn't count
             await self.deterministic(run, prior)
+        self.last_run = run
         await ctx.bus.publish(ctx.incident_id, "agent.done", self.name, summary=self.summary(run))
         return run.findings

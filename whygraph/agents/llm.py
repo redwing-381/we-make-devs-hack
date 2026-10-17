@@ -164,6 +164,9 @@ async def tool_loop(run: "AgentRun", agent: "BaseAgent", prior: list[Finding]) -
         messages.append({"role": "assistant", "content": resp.content})  # append-only: keeps thinking blocks
         uses = [b for b in resp.content if b.type == "tool_use"]
         if not uses:
+            text = "".join(getattr(b, "text", "") for b in resp.content if b.type == "text").strip()
+            if text:
+                run.scope["final_text"] = text  # e.g. Brain's answer
             return
         results = []
         for block in uses:
