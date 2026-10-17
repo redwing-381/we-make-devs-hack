@@ -302,6 +302,11 @@ def record_guard_outcome(
 - `criticality`: `algo.pageRank('Service','CALLS')`. It feeds incident severity and the PR Guard risk tier.
 - `stale_runbooks`: runbooks that `MENTIONS` a ConfigKey whose latest `CHANGES.ts` is after the runbook's
   `updated_at`.
+- **Columns Solai's Brain agent reads** (`whygraph/agents/brain.py`, mocked in `tests/act1_graph.py`):
+  - `why_is(cfg)`: `config`, `value`, `changed_by`, `commit`, `pr`, `decision` (title), `lesson`, `lesson_text`,
+    `incident`, `path`
+  - `doc_search(text)`: `doc` (id), `title`, `kind`, `snippet`, `score`
+  - `stale_runbooks()`: `runbook`, `title`, `config`, `changed_at`, `updated_at`, `path`
 
 **Evening:** you own the README sections for the schema diagram (Mermaid) and the query explanations, and the
 blog post (side prize).

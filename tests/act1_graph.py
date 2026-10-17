@@ -36,6 +36,12 @@ incident, past = n("Incident", "inc:INC-1031"), n("Incident", "inc:INC-0977")
 symptom = n("Feature", "feat:symptom:caller_5xx_callee_healthy")
 team, priya = n("Team", "team:payments"), n("Engineer", "eng:priya", kind="human", on_call=True)
 
+quote_key = n("ConfigKey", "cfg:shipping.timeouts_ms.quote", kind="timeout")
+commit15, pr15 = n("Commit", "commit:5e1d2aa"), n("PR", "pr:15")
+decision = n("Decision", "dec:caller-timeouts")
+lesson1 = n("Lesson", "lesson:L-1")
+runbook = n("Runbook", "rb:payment-latency")
+
 ROWS = {
     "root_alert": (
         ["service", "alert", "path"],
@@ -126,6 +132,68 @@ ROWS = {
                 4,
                 2,
                 Path([checkout, team, priya], [e(team, "OWNS", checkout), e(priya, "MEMBER_OF", team)]),
+            ]
+        ],
+    ),
+    "why_is": (
+        [
+            "config",
+            "value",
+            "changed_by",
+            "commit",
+            "pr",
+            "decision",
+            "lesson",
+            "lesson_text",
+            "incident",
+            "path",
+        ],
+        [
+            [
+                "cfg:shipping.timeouts_ms.quote",
+                450,
+                "coder-bot",
+                "commit:5e1d2aa",
+                "pr:15",
+                "Keep caller timeouts ≥ 1.5× the callee p99",
+                "lesson:L-1",
+                "a timeout below the callee p99 turns slow calls into errors",
+                "inc:INC-1031",
+                Path(
+                    [quote_key, commit15, pr15, decision, lesson1, incident],
+                    [
+                        e(commit15, "CHANGES", quote_key),
+                        e(pr15, "CONTAINS", commit15),
+                        e(pr15, "IMPLEMENTS", decision),
+                        e(decision, "FROM", lesson1),
+                        e(lesson1, "LEARNED_FROM", incident),
+                    ],
+                ),
+            ]
+        ],
+    ),
+    "doc_search": (
+        ["doc", "title", "kind", "snippet", "score"],
+        [
+            [
+                "rb:payment-latency",
+                "Payment latency",
+                "runbook",
+                "Check payment p99 before tuning timeouts",
+                0.81,
+            ]
+        ],
+    ),
+    "stale_runbooks": (
+        ["runbook", "title", "config", "changed_at", "updated_at", "path"],
+        [
+            [
+                "rb:payment-latency",
+                "Payment latency",
+                "cfg:checkout.timeouts_ms.payment",
+                ALERT_TS,
+                ALERT_TS - 86_400_000,
+                Path([runbook, key, commit], [e(runbook, "MENTIONS", key), e(commit, "CHANGES", key)]),
             ]
         ],
     ),
