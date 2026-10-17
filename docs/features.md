@@ -29,7 +29,7 @@ signatures: [work-split.md](work-split.md). The full design is in [plan.md](plan
 | F-A4 | A | `feat/snapshots` | `scripts/reset_to.py` | F-A1 | `reset_to.py act1` restores the graph state before Act 1 (GRAPH.COPY or reseed) |
 | F-B4 | B | `feat/agents-memory-comms` | `whygraph/agents/memory.py`, `whygraph/agents/comms.py`, resolve route in `routes/incidents.py` | F-A3, F-B3 | Memory + Comms findings; "Confirm root cause" writes Lesson + Detector and emits `memory.lesson_written` |
 | F-B5 | B | `feat/mcp` | `whygraph/integrations/mcp_server.py`, `scenarios/sde-agent-kit.md` | F-A3 | `/mcp` serves `check_change_risk`, `who_knows`, `why_is`, `get_service_context`; our SDE agents connect |
-| F-B6 | B | `feat/pr-guard` | `whygraph/integrations/github.py` | F-B5 | Polls astro-mini PRs, parses the `services.yaml` diff into `CHANGES`, posts a PR Guard comment |
+| F-B6 | B | `feat/pr-guard` | `whygraph/integrations/github.py` | F-B5 | Polls astro-mini PRs, diffs `services.yaml` (merge base vs head), runs the guard, posts one PR Guard comment; on merge records `applied`/`ignored`. `CHANGES` edges are written once, by the deploy (F-B2) |
 | F-C3 | C | `feat/ui-cypher-drawer` | `ui/src/components/CypherDrawer.tsx`, `ui/src/components/GraphOnlyToggle.tsx` | F-A2 | Drawer shows query + params; **Run live** calls `/api/query/run` and re-highlights the path |
 | F-C4 | C | `feat/ui-tabs` | `ui/src/pages/PRGuard.tsx`, `ui/src/pages/Memory.tsx` | F-B4 | PR verdicts with lessons; lesson confidence/uses/prevented; memory type labels |
 
