@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from whygraph.agents.orchestrator import start_investigation
 from whygraph.config import get_settings
 from whygraph.graph import client
-from whygraph.integrations.ingest import ingest_alert, ingest_deploy, ingest_telemetry
+from whygraph.integrations.ingest import UnknownServiceError, ingest_alert, ingest_deploy, ingest_telemetry
 from whygraph.models.events import AlertIn, DeployIn, TelemetryIn
 
 router = APIRouter(tags=["ingest"])
@@ -22,7 +22,10 @@ def _require_db() -> None:
 async def post_alert(alert: AlertIn) -> dict:
     """Group the alert into an incident; a new incident starts the agents after a short grace period."""
     _require_db()
-    incident_id, created = await asyncio.to_thread(ingest_alert, alert)
+    try:
+        incident_id, created = await asyncio.to_thread(ingest_alert, alert)
+    except UnknownServiceError as e:
+        raise HTTPException(422, str(e)) from e
     investigating = created and start_investigation(incident_id, delay_s=get_settings().alert_grace_s)
     return {"incident_id": incident_id, "created": created, "investigating": investigating}
 

@@ -42,8 +42,8 @@ def test_replay_rejects_path_traversal():
 
 
 def test_stubs_and_ingest_without_db():
-    alert = {"service": "checkout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
-    assert client.post("/api/alerts", json=alert).status_code in (202, 503)  # 503 without FalkorDB
+    alert = {"service": "no-such-service", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
+    assert client.post("/api/alerts", json=alert).status_code in (422, 503)  # 503 without FalkorDB
     assert client.post("/api/brain/ask", json={"question": "who knows checkout?"}).status_code in (200, 503)
 
 
@@ -59,3 +59,17 @@ def test_incident_stream_serves_bus_history():
     with client.stream("GET", "/api/incidents/INC-API/stream") as r:
         lines = [line for line in r.iter_lines() if line.startswith('data: {"seq"')]
     assert len(lines) == 1 and '"agent.started"' in lines[0]
+
+
+def test_alert_on_unknown_service_is_422(monkeypatch):
+    from whygraph.api.routes import ingest as route
+    from whygraph.integrations.ingest import UnknownServiceError
+
+    def reject(alert):
+        raise UnknownServiceError(f"unknown service {alert.service!r}")
+
+    monkeypatch.setattr(route.client, "ping", lambda: True)
+    monkeypatch.setattr(route, "ingest_alert", reject)
+    alert = {"service": "chekout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
+    r = client.post("/api/alerts", json=alert)
+    assert r.status_code == 422 and "chekout" in r.json()["detail"]

@@ -2,11 +2,19 @@
 
 import pytest
 
-from whygraph.integrations.ingest import ingest_alert, ingest_deploy, ingest_telemetry
+from whygraph.integrations.ingest import UnknownServiceError, ingest_alert, ingest_deploy, ingest_telemetry
 from whygraph.models.events import AlertIn, DeployIn, TelemetryIn
 
 pytestmark = pytest.mark.db
 T = 1_800_000_000_000
+SERVICES = ["cart", "checkout", "frontend", "payment"]
+
+
+@pytest.fixture
+def graph(graph):
+    """The throwaway graph with the Service nodes ingest links to (it never creates them)."""
+    graph.query("UNWIND $names AS n CREATE (:Service {id: 'svc:' + n, name: n})", {"names": SERVICES})
+    return graph
 
 
 def alert(service, ts, id=None, severity="sev2"):
@@ -98,3 +106,40 @@ def test_deploy_records_change_with_callee_p99_at_change(graph):
         "RETURN e.p99_ms, e.error_rate, ch.callee_p99_at_change"
     ).result_set
     assert rows == [[470, 0.6, 450]]
+
+
+def test_alert_on_unknown_service_is_rejected(graph):
+    with pytest.raises(UnknownServiceError):
+        ingest_alert(alert("chekout", T, "typo"), graph.name)
+    assert graph.query("MATCH (n) WHERE n:Incident OR n:Alert RETURN count(n)").result_set == [[0]]
+    assert graph.query("MATCH (s:Service) RETURN count(s)").result_set == [[len(SERVICES)]]
+
+
+def test_telemetry_skips_edges_to_unknown_services(graph):
+    edges = [
+        {"caller": "checkout", "callee": "payment", "p99_ms": 450, "error_rate": 0},
+        {"caller": "checkout", "callee": "paymnet", "p99_ms": 450, "error_rate": 0},
+    ]
+    assert ingest_telemetry(TelemetryIn(ts=T, edges=edges), graph.name) == 1
+    assert graph.query("MATCH ()-[c:CALLS]->() RETURN count(c)").result_set == [[1]]
+    assert graph.query("MATCH (s:Service) RETURN count(s)").result_set == [[len(SERVICES)]]
+
+
+def test_deploy_links_only_existing_services(graph):
+    deploy = DeployIn(
+        sha="1234567abcdef",
+        repo="org/astro-mini",
+        services=["checkout", "chekout"],
+        ts=T,
+        config_changes=[
+            {"service": "checkout", "key": "timeouts_ms.paymnet", "old": 800, "new": 200},
+            {"service": "chekout", "key": "timeouts_ms.payment", "old": 800, "new": 200},
+        ],
+    )
+    assert ingest_deploy(deploy, graph.name) == "deploy:1234567"
+    assert graph.query("MATCH (s:Service) RETURN count(s)").result_set == [[len(SERVICES)]]
+    assert graph.query("MATCH (:Deploy)-[:OF]->(s:Service) RETURN s.name").result_set == [["checkout"]]
+    rows = graph.query(
+        "MATCH (:Commit)-[:CHANGES]->(k:ConfigKey) OPTIONAL MATCH (k)-[:TARGETS]->(t) RETURN k.id, t"
+    ).result_set
+    assert rows == [["cfg:checkout.timeouts_ms.paymnet", None]]  # known caller kept, typo'd callee unlinked
