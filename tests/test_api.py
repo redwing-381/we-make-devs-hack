@@ -41,9 +41,9 @@ def test_replay_rejects_path_traversal():
     assert client.get("/api/replay/..%2Fsecrets").status_code in (400, 404)
 
 
-def test_feature_stubs_return_501():
+def test_stubs_and_ingest_without_db():
     alert = {"service": "checkout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
-    assert client.post("/api/alerts", json=alert).status_code == 501
+    assert client.post("/api/alerts", json=alert).status_code in (202, 503)  # 503 without FalkorDB
     assert client.post("/api/brain/ask", json={"question": "who knows checkout?"}).status_code == 501
 
 
