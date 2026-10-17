@@ -39,6 +39,7 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "db: needs a running FalkorDB (skipped if unreachable, unless REQUIRE_FALKORDB=1)",
 ]

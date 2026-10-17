@@ -19,6 +19,7 @@ ui/dist/
 
 # runtime data
 data/
+!seed/data/
 scenarios/recordings/live/
 *.log
 
