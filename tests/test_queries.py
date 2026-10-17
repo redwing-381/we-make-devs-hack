@@ -203,3 +203,9 @@ def test_q8_doc_search_finds_the_payment_runbook(seeded):
     docs = doc_search("checkout payment timeout", seeded)
     assert docs[0].id == "rb:payment-latency"
     assert "cfg:checkout.timeouts_ms.payment" in {n.id for n in docs[0].evidence.nodes}
+
+
+def test_q8_runbooks_are_not_drowned_by_short_chat_lines(seeded):
+    rows = queries.run("doc_search", {"terms": "handle|kafka|consumer|lag"}, graph=seeded).rows
+    assert rows[0]["id"] == "rb:kafka-consumer-lag"
+    assert [r["kind"] for r in rows] == sorted((r["kind"] for r in rows), reverse=True)  # runbooks, then chat
