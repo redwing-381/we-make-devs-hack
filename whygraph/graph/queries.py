@@ -436,7 +436,9 @@ register(
         code="Q8",
         title="Search runbooks and chat",
         explain=(
-            "Full-text search over runbooks and incident chat. `terms` uses FalkorDB full-text syntax: words "
+            "Full-text search over runbooks and incident chat: the best 5 runbooks first, then the best 5 "
+            "chat lines (short chat lines would otherwise out-score the runbook that answers the question). "
+            "`terms` uses FalkorDB full-text syntax: words "
             "separated by | match any of them. Runbooks come back with what they MENTION (config keys, "
             "services), so an answer can point at the graph, not just at text. whygraph.memory.search."
             "doc_search adds the vector half (Q8v) and builds the terms from a plain question."
@@ -445,17 +447,18 @@ register(
 CALL {
   CALL db.idx.fulltext.queryNodes('Runbook', $terms) YIELD node, score
   RETURN node, score, 'runbook' AS kind
+  ORDER BY score DESC
+  LIMIT 5
   UNION
   CALL db.idx.fulltext.queryNodes('ChatMessage', $terms) YIELD node, score
   RETURN node, score, 'chat' AS kind
+  ORDER BY score DESC
+  LIMIT 5
 }
-WITH node, score, kind
-ORDER BY score DESC
-LIMIT 10
 OPTIONAL MATCH mentions = (node)-[:MENTIONS]->()
 RETURN node.id AS id, kind, coalesce(node.title, node.channel) AS title, node.text AS text, score, node,
        collect(mentions) AS mentions
-ORDER BY score DESC
+ORDER BY kind DESC, score DESC
 """.strip(),
         example_params={"terms": "timeout|payment"},
     )

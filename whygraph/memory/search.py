@@ -38,14 +38,17 @@ def doc_search(question: str, graph: str | None = None, k: int = 5) -> list[Doc]
     t = terms(question)
     if t:
         out = queries.run("doc_search", {"terms": t}, graph=graph)
-        top = max((r["score"] for r in out.rows), default=1.0) or 1.0
+        top = {
+            k: max((r["score"] for r in out.rows if r["kind"] == k), default=1.0) or 1.0
+            for k in ("runbook", "chat")
+        }
         for r in out.rows:
             docs[r["id"]] = Doc(
                 r["id"],
                 r["kind"],
                 r["title"],
                 r["text"],
-                round(r["score"] / top, 3),
+                round(r["score"] / top[r["kind"]] * (1.0 if r["kind"] == "runbook" else 0.8), 3),
                 row_subgraph(out, r, ["node", "mentions"]),
             )
     vec = try_embed(question)

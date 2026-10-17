@@ -24,7 +24,7 @@ class Embedder:
         self._client = client
         self._cache: dict[str, list[float]] = {}
         if cache_path and cache_path.exists():
-            self._cache = json.loads(cache_path.read_text())
+            self._cache = json.loads(cache_path.read_text(encoding="utf-8"))
 
     @property
     def client(self):
@@ -61,4 +61,4 @@ class Embedder:
     def save(self) -> None:
         if self.cache_path:
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self.cache_path.write_text(json.dumps(self._cache))
+            self.cache_path.write_text(json.dumps(self._cache), encoding="utf-8")

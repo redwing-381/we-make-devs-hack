@@ -29,7 +29,7 @@ def main() -> None:
             f"Example params: `{json.dumps(q.example_params)}`",
             "",
         ]
-    OUT.write_text("\n".join(lines))
+    OUT.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {OUT.relative_to(REPO_ROOT)} ({len(CATALOG)} queries)")
 
 
