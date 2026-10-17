@@ -76,13 +76,19 @@ def test_http_endpoint_requires_the_bearer_token():
         assert http.post("/mcp/", json=body, headers=good).status_code != 401
 
 
-def test_rest_guard_check():
+def test_rest_guard_check(monkeypatch):
     from whygraph.api.main import app
+    from whygraph.graph import client
+    from whygraph.integrations import guard
+
+    seen = []
+    stub = guard.Memory(check_changes=lambda c, g: seen.append(g) or [], record_guard_outcome=lambda *a: None)
+    monkeypatch.setattr(guard, "default_memory", lambda: stub)  # independent of what the demo graph learned
+    monkeypatch.setattr(client, "ping", lambda: True)
 
     r = TestClient(app).post(
-        "/api/guard/check",
+        "/api/guard/check?graph=tenant_b",
         json={"changes": [{"service": "shipping", "key": "timeouts_ms.quote", "new": 100}]},
     )
-    assert r.status_code in (200, 503)  # 503 without FalkorDB
-    if r.status_code == 200:
-        assert r.json()["risk"] == "none"
+    assert r.status_code == 200 and r.json()["risk"] == "none"
+    assert seen == ["tenant_b"]
