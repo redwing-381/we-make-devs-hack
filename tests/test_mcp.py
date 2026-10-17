@@ -22,7 +22,13 @@ def test_lists_the_four_tools():
         async with Client(mcp_server.build_server(auth=False)) as c:
             return {t.name for t in await c.list_tools()}
 
-    assert asyncio.run(go()) == {"check_change_risk", "who_knows", "why_is", "get_service_context"}
+    assert asyncio.run(go()) == {
+        "check_change_risk",
+        "who_knows",
+        "why_is",
+        "get_service_context",
+        "incident_report",
+    }
 
 
 def test_check_change_risk_round_trips_the_contract(monkeypatch):
@@ -92,3 +98,39 @@ def test_rest_guard_check(monkeypatch):
     )
     assert r.status_code == 200 and r.json()["risk"] == "none"
     assert seen == ["tenant_b"]
+
+
+def test_incident_report_after_act1(monkeypatch):
+    from tests.act1_graph import Act1Board, Recorder
+    from whygraph.agents.cause import CauseAgent
+    from whygraph.agents.events import EventBus
+    from whygraph.agents.orchestrator import Orchestrator, Team
+    from whygraph.agents.triage import TriageAgent
+
+    board = Act1Board()
+    orch = Orchestrator(
+        team=Team(triage=TriageAgent(), cause=CauseAgent()),
+        bus=EventBus(),
+        board_factory=lambda g: board,
+        llm_factory=lambda: None,
+        run_query=Recorder(),
+    )
+    asyncio.run(orch.investigate("INC-1031", graph_only=True))
+    monkeypatch.setattr(mcp_server, "Board", lambda graph=None: board)
+
+    data = call("incident_report", {}).structured_content  # no id: the latest open incident
+    assert data["found"] and data["incident"]["id"] == "INC-1031" and data["investigated"]
+    assert data["root_cause"]["claim"].startswith("Root cause: 9f2c1ab")
+    assert data["guilty_commit"] == "commit:9f2c1ab"
+    assert "customer-facing: frontend" in data["blast_radius"]
+    assert len(data["findings"]) == 4 and all(f["node_ids"] for f in data["findings"])
+
+
+def test_incident_report_with_no_incidents(monkeypatch):
+    from whygraph.agents.blackboard import MemoryBoard
+
+    monkeypatch.setattr(mcp_server, "Board", lambda graph=None: MemoryBoard())
+    assert call("incident_report", {}).structured_content == {
+        "found": False,
+        "detail": "no incidents in this graph",
+    }

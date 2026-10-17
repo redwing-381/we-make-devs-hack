@@ -10,6 +10,8 @@ from typing import Any
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 
+from whygraph.agents.blackboard import Board
+from whygraph.agents.report import incident_report as report
 from whygraph.config import get_settings
 from whygraph.graph import queries
 from whygraph.integrations.guard import check_change_risk as run_guard
@@ -22,8 +24,9 @@ INSTRUCTIONS = """Why-Graph remembers how this company's production broke before
 Before you open a PR that changes config (timeouts, retries, pool sizes, flags) or call paths, call
 check_change_risk with the exact changes. If it returns warnings, follow the advice (e.g. the safe_min value)
 and cite the lesson id in your PR body. Use who_knows to find the owner or on-call engineer for a service,
-why_is to learn why a config value is what it is, and get_service_context before touching an unfamiliar
-service. Every answer includes the graph node ids it came from."""
+why_is to learn why a config value is what it is, get_service_context before touching an unfamiliar
+service, and incident_report to learn what broke, why, and which commit to fix. Every answer includes
+the graph node ids it came from."""
 
 
 def _graph(graph: str | None) -> str | None:
@@ -91,6 +94,16 @@ def build_server(auth: bool = True) -> FastMCP:
             "neighbors": _catalog("service_neighbors", {"svc": service}, graph),
             "owners": _catalog("who_knows", {"svc": service}, graph),
         }
+
+    @mcp.tool(annotations={"readOnlyHint": True})
+    def incident_report(incident_id: str | None = None, graph: str | None = None) -> dict:
+        """What broke and why: the latest open incident (or the one named, e.g. "INC-1032").
+
+        Returns its status, the root-cause finding and guilty commit, blast radius, what Memory recalled, the
+        status update Comms posted, and every finding with the graph node ids behind it. Use it to plan the
+        fix; the fix itself goes through a normal PR (and check_change_risk).
+        """
+        return report(Board(_graph(graph)), incident_id)
 
     return mcp
 

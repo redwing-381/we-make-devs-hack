@@ -98,6 +98,15 @@ def test_the_demo_on_the_real_seed(graphs):
     ).rows[0]["ids"]
     assert "eng:coder-bot" in paged and len(paged) == 2
 
+    # what an external coordinator (our Band team) reads over MCP before assigning the fix
+    async def mcp_report():
+        async with Client(mcp_server.build_server(auth=False)) as c:
+            return await c.call_tool("incident_report", {"incident_id": "INC-1031", "graph": demo})
+
+    report = asyncio.run(mcp_report()).structured_content
+    assert report["guilty_commit"] == "commit:9f2c1ab" and report["root_cause"]["id"] == cause.id
+    assert report["status_update"] == status
+
     # --- Confirm root cause + fix: the incident becomes memory ---------------------------------
     res = asyncio.run(
         resolve(
