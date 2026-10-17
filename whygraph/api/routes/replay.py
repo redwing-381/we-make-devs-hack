@@ -1,4 +1,4 @@
-"""Replay recorded AgentEvent streams (scenarios/recordings/*.jsonl) over SSE.
+"""Replay recorded AgentEvent streams (scenarios/recordings/*.jsonl, live runs as live/<incident>) over SSE.
 
 Same wire format as the live stream, so the UI can be built and demoed without agents or a database.
 """
@@ -16,15 +16,17 @@ from whygraph.config import get_settings
 from whygraph.models.events import AgentEvent
 
 router = APIRouter(prefix="/replay", tags=["replay"])
-NAME = re.compile(r"^[a-z0-9_-]{1,64}$")
+NAME = re.compile(r"^[A-Za-z0-9_-]{1,64}$")  # live runs are named by incident id, e.g. INC-1031
+LIVE = "live"  # the event bus records live runs into recordings_dir/live
 MAX_GAP_S = 2.0
 
 
-def _path(name: str) -> Path:
-    if not NAME.match(name):
+def _path(name: str, live: bool = False) -> Path:
+    if not NAME.fullmatch(name):
         raise HTTPException(400, "invalid recording name")
-    p = get_settings().recordings_dir / f"{name}.jsonl"
-    if not p.exists():
+    root = get_settings().recordings_dir
+    p = (root / LIVE if live else root) / f"{name}.jsonl"
+    if not p.is_file():
         raise HTTPException(404, f"no recording {name!r}")
     return p
 
@@ -39,7 +41,21 @@ def load_recording(path: Path) -> list[AgentEvent]:
 
 @router.get("")
 def list_recordings() -> list[str]:
-    return sorted(p.stem for p in get_settings().recordings_dir.glob("*.jsonl"))
+    root = get_settings().recordings_dir
+    names = [p.stem for p in root.glob("*.jsonl") if NAME.fullmatch(p.stem)]
+    live = [f"{LIVE}/{p.stem}" for p in (root / LIVE).glob("*.jsonl") if NAME.fullmatch(p.stem)]
+    return sorted(names) + sorted(live)
+
+
+# declared before /{name}/stream so a live recording named "stream" still resolves here
+@router.get("/live/{name}")
+def get_live_recording(name: str) -> list[dict]:
+    return [e.model_dump() for e in load_recording(_path(name, live=True))]
+
+
+@router.get("/live/{name}/stream")
+async def stream_live_recording(name: str, speed: float = Query(2.0, gt=0, le=20)) -> StreamingResponse:
+    return _stream(_path(name, live=True), f"{LIVE}/{name}", speed)
 
 
 @router.get("/{name}")
@@ -49,7 +65,11 @@ def get_recording(name: str) -> list[dict]:
 
 @router.get("/{name}/stream")
 async def stream_recording(name: str, speed: float = Query(2.0, gt=0, le=20)) -> StreamingResponse:
-    events = load_recording(_path(name))
+    return _stream(_path(name), name, speed)
+
+
+def _stream(path: Path, name: str, speed: float) -> StreamingResponse:
+    events = load_recording(path)
 
     async def gen() -> AsyncIterator[str]:
         prev_ts = events[0].ts if events else 0
