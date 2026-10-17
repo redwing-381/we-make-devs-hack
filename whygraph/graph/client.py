@@ -10,6 +10,7 @@ from functools import lru_cache
 from typing import Any
 
 from falkordb import Edge, FalkorDB, Graph, Node, Path
+from redis.exceptions import ResponseError
 
 from whygraph.config import get_settings
 from whygraph.graph.ids import rel_id
@@ -55,7 +56,12 @@ def run(
     g = graph if isinstance(graph, Graph) else get_graph(graph)
     started = time.perf_counter()
     if read_only:
-        res = g.ro_query(cypher, params or {}, timeout=timeout_ms)
+        try:
+            res = g.ro_query(cypher, params or {}, timeout=timeout_ms)
+        except ResponseError as e:
+            if "empty key" not in str(e):
+                raise
+            return QueryOutput(columns=[], rows=[], subgraph=Subgraph(), ms=0.0)  # graph not created yet
     else:
         res = g.query(cypher, params or {}, timeout=timeout_ms)
     ms = (time.perf_counter() - started) * 1000
