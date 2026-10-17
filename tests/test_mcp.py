@@ -5,6 +5,7 @@ from fastmcp import Client
 
 from tests.fakes import fake_run_query
 from whygraph.config import get_settings
+from whygraph.graph import queries
 from whygraph.integrations import mcp_server
 
 
@@ -32,7 +33,8 @@ def test_check_change_risk_round_trips_the_contract():
     assert data["risk"] == "none" and "warnings" in data and "advice" in data
 
 
-def test_read_tools_report_missing_catalog_queries():
+def test_read_tools_report_missing_catalog_queries(monkeypatch):
+    monkeypatch.delitem(queries.CATALOG, "who_knows")
     assert call("who_knows", {"service": "checkout"}).structured_content["available"] is False
 
 
@@ -44,7 +46,7 @@ def test_service_context_uses_catalog_queries(monkeypatch):
     )
     data = call("get_service_context", {"service": "checkout"}).structured_content
     assert data["neighbors"]["available"] and "svc:payment" in data["neighbors"]["node_ids"]
-    assert data["owners"]["available"] is False  # who_knows is F-A2
+    assert data["owners"]["available"]  # who_knows landed with F-A2
 
 
 def test_bad_graph_name_is_rejected():
