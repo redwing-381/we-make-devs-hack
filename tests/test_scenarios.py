@@ -5,7 +5,7 @@ import uuid
 import pytest
 
 from seed import generate, load
-from whygraph.graph import client, ids
+from whygraph.graph import client, ids, queries
 from whygraph.graph.features import extract_features
 from whygraph.memory.detectors import check_changes
 from whygraph.memory.lessons import record_guard_outcome, write_lesson
@@ -45,6 +45,35 @@ def cause_finding(graph: str, incident: str, sha: str) -> str:
         read_only=False,
     )
     return fid
+
+
+def write(graph: str, g: generate.Graph) -> None:
+    data = g.to_json()
+    nodes = {label: {r["id"]: r for r in rows} for label, rows in data["nodes"].items()}
+    rels = {(r["src"], r["type"], r["dst"]): r["props"] for r in data["rels"]}
+    target = client.get_graph(graph)
+    load.write_nodes(target, nodes)
+    load.write_rels(target, rels)
+
+
+def inject_act2_pr(graph: str) -> None:
+    """Act 2: PR #15 sets shipping->quote to 450 ms (what PR Guard / the ingester would write)."""
+    t = generate.T0 + 3_600_000
+    g = generate.Graph()
+    g.node("Commit", "commit:5ee4501", name="5ee4501", sha="5ee4501", message="tune quote timeout", ts=t)
+    g.rel("commit:5ee4501", "AUTHORED_BY", "eng:coder-bot")
+    g.rel(
+        "commit:5ee4501",
+        "CHANGES",
+        "cfg:shipping.timeouts_ms.quote",
+        old=600,
+        new=450,
+        ts=t,
+        callee_p99_at_change=300,
+    )
+    g.node("PR", "pr:15", name="#15 Tune shipping quote timeout", number=15, state="merged")
+    g.rel("pr:15", "CONTAINS", "commit:5ee4501")
+    write(graph, g)
 
 
 def inject_act3(graph: str) -> None:
@@ -105,12 +134,7 @@ def inject_act3(graph: str) -> None:
         )
         g.rel(aid, "FIRED_ON", f"svc:{svc}")
         g.rel("inc:INC-1033", "TRIGGERED_BY", aid)
-    data = g.to_json()
-    nodes = {label: {r["id"]: r for r in rows} for label, rows in data["nodes"].items()}
-    rels = {(r["src"], r["type"], r["dst"]): r["props"] for r in data["rels"]}
-    target = client.get_graph(graph)
-    load.write_nodes(target, nodes)
-    load.write_rels(target, rels)
+    write(graph, g)
 
 
 def test_seeded_features_are_what_extraction_derives(graphs):
@@ -170,6 +194,7 @@ def test_memory_story(graphs):
     )
 
     record_guard_outcome(15, "L-1", "warned", demo)
+    inject_act2_pr(demo)  # the SDE agent shipped 450 instead of 100
     record_guard_outcome(15, "L-1", "applied", demo)
     record_guard_outcome(15, "lesson:L-1", "applied", demo)  # retried webhook: no double count
     lesson = client.run(
@@ -179,6 +204,21 @@ def test_memory_story(graphs):
         graph=demo,
     ).rows
     assert lesson == [{"confidence": 0.8, "uses": 1, "prevented": 1}]
+
+    # Brain: "why is shipping->quote 450 ms?" -> PR #15 -> Decision <- L-1 -> INC-1031 -> PR #12
+    latest = queries.run("why_is", {"key": "shipping.timeouts_ms.quote"}, graph=demo).rows[0]
+    assert (latest["pr"], latest["new"], latest["lessons"], latest["incidents"]) == (
+        15,
+        450,
+        ["lesson:L-1"],
+        ["inc:INC-1031"],
+    )
+    why = {
+        n.id for n in queries.run("why_is", {"key": "shipping.timeouts_ms.quote"}, graph=demo).subgraph.nodes
+    }
+    assert {"pr:15", "lesson:L-1", "inc:INC-1031", "pr:12", "commit:9f2c1ab"} <= why
+    stale = {r["runbook"] for r in queries.run("stale_runbooks", graph=demo).rows}
+    assert {"rb:payment-latency", "rb:shipping-quotes"} <= stale
 
     # Act 3: override -> incident -> recall INC-1031 as a strong match
     inject_act3(demo)

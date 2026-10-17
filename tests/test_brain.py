@@ -74,7 +74,8 @@ def test_stale_runbooks_and_docs(catalog):
     ]
 
 
-def test_missing_query_is_explained():
+def test_missing_query_is_explained(monkeypatch):
+    monkeypatch.delitem(queries.CATALOG, "why_is")  # as if F-A5 weren't merged
     res = answer("Why is shipping→quote 450 ms?")
     assert (
         res["answer"] == "I can't answer that yet: the why_is query isn't in the catalog."

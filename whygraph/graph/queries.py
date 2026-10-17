@@ -13,6 +13,7 @@ Conventions every query follows:
   They are listed here so every line of Cypher the product runs is in one reviewed place.
 """
 
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -50,11 +51,20 @@ def get(query_id: str) -> CatalogQuery:
         raise KeyError(f"unknown query {query_id!r}; known: {sorted(CATALOG)}") from None
 
 
+def required_params(q: CatalogQuery) -> set[str]:
+    return set(re.findall(r"\$([A-Za-z_][A-Za-z0-9_]*)", q.cypher))
+
+
 def run(query_id: str, params: dict[str, Any] | None = None, *, graph=None, timeout_ms: int | None = None):
-    """Run a catalog query by id (read-only queries go through GRAPH.RO_QUERY). Returns client.QueryOutput."""
+    """Run a catalog query by id (read-only queries go through GRAPH.RO_QUERY). Returns client.QueryOutput.
+
+    Missing parameters are rejected here, before FalkorDB sees them: v4.22.1 can segfault on its own
+    missing-parameter error path (seen with the vector procedures in Q8v)."""
     from whygraph.graph import client
 
     q = get(query_id)
+    if missing := required_params(q) - set(params or {}):
+        raise ValueError(f"{query_id}: missing parameters {sorted(missing)}")
     kwargs = {"timeout_ms": timeout_ms} if timeout_ms else {}
     return client.run(q.cypher, params or {}, graph=graph, read_only=q.read_only, **kwargs)
 
@@ -382,6 +392,152 @@ register(
         example_params={
             "changes": [{"service": "shipping", "key": "timeouts_ms.quote", "old": 600, "new": 100}]
         },
+    )
+)
+
+# --- Q7–Q10: company brain (F-A5) -----------------------------------------------------------
+
+register(
+    CatalogQuery(
+        id="why_is",
+        code="Q7",
+        title="Why is this config value what it is",
+        explain=(
+            "The history behind a config key, newest change first: which commit and PR set each value and "
+            "who "
+            "wrote it, and, when the PR followed a lesson, the chain PR -> IMPLEMENTS Decision <- FROM "
+            "Lesson "
+            "-> LEARNED_FROM Incident -> CAUSED_BY the commit and PR that broke things originally. Answers "
+            "'why is shipping->quote 450 ms?' with a path, not a guess. Accepts 'shipping.timeouts_ms.quote' "
+            "or the node id."
+        ),
+        cypher="""
+MATCH (k:ConfigKey)
+WHERE k.id IN [$key, 'cfg:' + $key]
+OPTIONAL MATCH changed = (k)<-[ch:CHANGES]-(c:Commit)<-[:CONTAINS]-(pr:PR)
+OPTIONAL MATCH author = (c)-[:AUTHORED_BY]->(who:Engineer)
+OPTIONAL MATCH why = (pr)-[:IMPLEMENTS]->(:Decision)-[:FROM]->(l:Lesson)-[:LEARNED_FROM]->(i:Incident)
+OPTIONAL MATCH origin = (i)-[:CAUSED_BY]->(:Commit)<-[:CONTAINS]-(:PR)
+OPTIONAL MATCH applied = (pr)-[:APPLIED]->(:Lesson)
+OPTIONAL MATCH broke = (:Incident)-[:CAUSED_BY]->(c)
+RETURN k.id AS key, k.value AS value, c.sha AS sha, pr.number AS pr, who.handle AS author, ch.old AS old,
+       ch.new AS new, ch.ts AS ts, collect(DISTINCT l.id) AS lessons, collect(DISTINCT i.id) AS incidents,
+       changed, author AS author_path, collect(DISTINCT why) AS why, collect(DISTINCT origin) AS origin,
+       collect(DISTINCT applied) AS applied, collect(DISTINCT broke) AS caused_incident
+ORDER BY ts DESC
+""".strip(),
+        example_params={"key": "checkout.timeouts_ms.payment"},
+    )
+)
+
+register(
+    CatalogQuery(
+        id="doc_search",
+        code="Q8",
+        title="Search runbooks and chat",
+        explain=(
+            "Full-text search over runbooks and incident chat. `terms` uses FalkorDB full-text syntax: words "
+            "separated by | match any of them. Runbooks come back with what they MENTION (config keys, "
+            "services), so an answer can point at the graph, not just at text. whygraph.memory.search."
+            "doc_search adds the vector half (Q8v) and builds the terms from a plain question."
+        ),
+        cypher="""
+CALL {
+  CALL db.idx.fulltext.queryNodes('Runbook', $terms) YIELD node, score
+  RETURN node, score, 'runbook' AS kind
+  UNION
+  CALL db.idx.fulltext.queryNodes('ChatMessage', $terms) YIELD node, score
+  RETURN node, score, 'chat' AS kind
+}
+WITH node, score, kind
+ORDER BY score DESC
+LIMIT 10
+OPTIONAL MATCH mentions = (node)-[:MENTIONS]->()
+RETURN node.id AS id, kind, coalesce(node.title, node.channel) AS title, node.text AS text, score, node,
+       collect(mentions) AS mentions
+ORDER BY score DESC
+""".strip(),
+        example_params={"terms": "timeout|payment"},
+    )
+)
+
+register(
+    CatalogQuery(
+        id="doc_search_vec",
+        code="Q8v",
+        title="Search runbooks and lessons by meaning",
+        explain=(
+            "Vector half of doc_search: runbooks and lessons whose Voyage embedding is closest to the "
+            "question "
+            "(similarity = 1 - cosine distance). Needs the question's embedding as $q, which "
+            "whygraph.memory.search.doc_search computes."
+        ),
+        cypher="""
+CALL {
+  CALL db.idx.vector.queryNodes('Runbook', 'embedding', 5, vecf32($q)) YIELD node, score
+  RETURN node, 1 - score AS score, 'runbook' AS kind
+  UNION
+  CALL db.idx.vector.queryNodes('Lesson', 'embedding', 5, vecf32($q)) YIELD node, score
+  RETURN node, 1 - score AS score, 'lesson' AS kind
+}
+WITH node, score, kind
+OPTIONAL MATCH mentions = (node)-[:MENTIONS|LEARNED_FROM]->()
+RETURN node.id AS id, kind, coalesce(node.title, node.name) AS title, node.text AS text, score, node,
+       collect(mentions) AS mentions
+ORDER BY score DESC
+""".strip(),
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="criticality",
+        code="Q9",
+        title="Service criticality (PageRank)",
+        explain=(
+            "How much of the system depends on each service: PageRank over CALLS, run inside FalkorDB "
+            "(algo.pageRank). Services many others call, directly or transitively, rank high. The top fifth "
+            "is 'high', the next 30% 'medium', the rest 'low'; it feeds incident severity and the PR Guard "
+            "risk tier."
+        ),
+        cypher="""
+CALL algo.pageRank('Service', 'CALLS') YIELD node, score
+WITH node, score
+ORDER BY score DESC, node.name
+WITH collect({name: node.name, tier: node.tier, score: score}) AS ranked
+UNWIND range(0, size(ranked) - 1) AS i
+WITH ranked[i] AS s, i, size(ranked) AS n
+RETURN s.name AS service, s.tier AS tier, s.score AS score, i + 1 AS rank,
+       CASE WHEN i < n * 0.2 THEN 'high' WHEN i < n * 0.5 THEN 'medium' ELSE 'low' END AS criticality
+ORDER BY rank
+""".strip(),
+    )
+)
+
+register(
+    CatalogQuery(
+        id="stale_runbooks",
+        code="Q10",
+        title="Stale runbooks",
+        explain=(
+            "Runbooks that are out of date: they MENTION a config key that has been changed since the "
+            "runbook "
+            "was last updated, so the value they tell on-call to expect is probably wrong. Returns the "
+            "newest "
+            "such change per key as a path runbook -> key <- commit."
+        ),
+        cypher="""
+MATCH p = (r:Runbook)-[:MENTIONS]->(k:ConfigKey)<-[ch:CHANGES]-(c:Commit)
+WHERE ch.ts > r.updated_at
+WITH r, k, p, ch
+ORDER BY ch.ts DESC
+WITH r, k, collect(p)[0] AS path, collect(ch.new)[0] AS changed_to, max(ch.ts) AS changed_at,
+     count(ch) AS changes_since
+RETURN r.id AS runbook, r.title AS title, r.updated_at AS updated_at, k.id AS key, k.value AS value,
+       changed_to, changed_at, changes_since, path
+ORDER BY changed_at DESC
+""".strip(),
     )
 )
 
