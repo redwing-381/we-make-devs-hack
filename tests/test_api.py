@@ -45,3 +45,17 @@ def test_feature_stubs_return_501():
     alert = {"service": "checkout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
     assert client.post("/api/alerts", json=alert).status_code == 501
     assert client.post("/api/brain/ask", json={"question": "who knows checkout?"}).status_code == 501
+
+
+def test_incident_stream_serves_bus_history():
+    import asyncio
+
+    from whygraph.agents.events import get_bus
+
+    bus = get_bus()
+    bus._record_dir = None  # don't write test events into recordings/live
+    asyncio.run(bus.publish("INC-API", "agent.started", "triage"))
+    bus.close("INC-API")
+    with client.stream("GET", "/api/incidents/INC-API/stream") as r:
+        lines = [line for line in r.iter_lines() if line.startswith('data: {"seq"')]
+    assert len(lines) == 1 and '"agent.started"' in lines[0]

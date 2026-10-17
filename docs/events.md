@@ -32,7 +32,12 @@ The stream is served at:
 - `GET /api/incidents/{id}/stream` for live runs
 - `GET /api/replay/{name}/stream?speed=2` for recorded runs
 
-Every SSE `data:` line is one `AgentEvent`. Live runs also append each event to a JSONL file. That is how
+Every SSE `data:` line is one `AgentEvent`. The live stream replays the history first, then follows until the
+investigation finishes and sends `event: end`; add `?follow=false` to get only the history.
+`POST /api/incidents/{id}/investigate` re-runs the agents on an existing incident.
+
+Live events are also written to `scenarios/recordings/live/<incident>.jsonl` and are reloaded after an API
+restart. Live runs also append each event to a JSONL file. That is how
 `scenarios/recordings/*.jsonl` get produced, and it's why replay and live use exactly the same format.
 
 ```json
@@ -42,12 +47,12 @@ Every SSE `data:` line is one `AgentEvent`. Live runs also append each event to 
 
 | `type` | `agent` | `payload` |
 |---|---|---|
-| `incident.opened` | orchestrator | `{incident: {id, title, severity, started_at}, alerts: [AlertIn]}` |
-| `agent.started` | any | `{}` |
+| `incident.opened` | orchestrator | `{incident: {id, title, severity, status, started_at}, alerts: [AlertIn], investigation_id, graph_only}` |
+| `agent.started` | any | `{phase}`: Memory runs twice (1 = symptoms only, 2 = after Cause) |
 | `agent.step` | any | `{tool, query_id, params, ms, summary}`: one tool call (also stored as an `AgentStep` node) |
 | `agent.finding` | any | `{finding: Finding}` |
 | `agent.handoff` | from-agent | `{to, finding_ids}` |
-| `agent.done` | any | `{summary}` |
+| `agent.done` | any | `{summary, error?}`: `error: true` if the agent crashed (the investigation carries on) |
 | `incident.resolved` | orchestrator | `{root_cause_finding_id, fix}` |
 | `memory.lesson_written` | memory | `{lesson: {id, text, confidence}, detector: {id, template, backtest_hits, backtest_total}, evidence: Subgraph}` |
 | `guard.checked` | guard | `ChangeRiskResponse` |

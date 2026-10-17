@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     model_reasoning: str = "claude-sonnet-5-5"
     model_fast: str = "claude-haiku-5-5"
     graph_only: bool = False
+    llm_fallbacks: bool = True  # server-side refusal fallback on the reasoning model
+    agent_max_steps: int = 8  # tool calls per agent run
+    llm_timeout_s: float = 60.0
+    alert_grace_s: float = 5.0  # wait for sibling alerts before investigating
 
     # Embeddings
     voyage_api_key: str | None = None
