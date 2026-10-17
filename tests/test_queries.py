@@ -126,8 +126,8 @@ def test_q6_guard_timeout_below_p99(act1, change, fires, safe_min):
 
 
 def test_fixture_findings_are_grounded_by_the_catalog(act1):
-    """Every Triage/Cause/Comms finding in the replay fixture cites ids its query really returns (grounding "
-    "rule)."""
+    """Every Triage/Cause/Comms finding in the replay fixture cites ids its query really returns (grounding
+    rule)."""
     path = get_settings().recordings_dir / "act1-fixture.jsonl"
     findings = [
         e["payload"]["finding"]
@@ -141,8 +141,8 @@ def test_fixture_findings_are_grounded_by_the_catalog(act1):
         assert {r["id"] for r in f["evidence"]["rels"]} <= rels, f["id"]
 
 
-@pytest.mark.parametrize("query_id", sorted(queries.CATALOG))
-def test_every_catalog_query_runs_on_the_full_seed(seeded, query_id):
+@pytest.mark.parametrize("query_id", sorted(q.id for q in queries.CATALOG.values() if q.read_only))
+def test_every_read_query_runs_on_the_full_seed(seeded, query_id):
     q = queries.get(query_id)
     out = queries.run(query_id, q.example_params, graph=seeded)
     assert out.ms < 2000

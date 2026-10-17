@@ -141,6 +141,10 @@ def load(
     nodes, rels = read(datasets(minimal=minimal, act1=act1))
     counts = {"nodes": write_nodes(g, nodes), "rels": write_rels(g, rels)}
     counts["embedded"] = write_embeddings(g, nodes) if embed else 0
+    if "Detector" in nodes:  # store how often each seeded detector would have fired on the history
+        from whygraph.memory.detectors import backtest_all
+
+        counts["detectors"] = len(backtest_all(g))
     return counts
 
 

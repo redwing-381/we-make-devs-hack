@@ -9,6 +9,8 @@ Conventions every query follows:
 - Commit params accept a full or short sha; the node id is `'commit:' + substring($sha, 0, 7)`.
 - Queries return **paths** (or lists of paths) next to the scalar columns, so `client.run()` can build the
   `Subgraph` the UI highlights and the grounding check verifies.
+- `internal=True` entries back the memory functions in whygraph/graph/features.py and whygraph/memory/*.
+  They are listed here so every line of Cypher the product runs is in one reviewed place.
 """
 
 from dataclasses import dataclass, field
@@ -26,6 +28,9 @@ class CatalogQuery:
     cypher: str
     example_params: dict[str, Any] = field(default_factory=dict)
     read_only: bool = True
+    # internal = backs a Python memory function (features, similarity, detectors, lessons); agents and MCP
+    # call that function instead, so tool generators should skip these.
+    internal: bool = False
 
 
 CATALOG: dict[str, CatalogQuery] = {}
@@ -377,5 +382,450 @@ register(
         example_params={
             "changes": [{"service": "shipping", "key": "timeouts_ms.quote", "old": 600, "new": 100}]
         },
+    )
+)
+
+# --- memory (F-A3): features, detectors, lessons. Internal: called through Python functions ---
+
+register(
+    CatalogQuery(
+        id="incident_symptoms",
+        code="M1",
+        title="Incident symptoms",
+        explain=(
+            "Facts for the symptom and topology features of an incident: its root alerting service(s) (as in "
+            "Q0), the signals that fired on the root, how many of the root's callees are NOT alerting "
+            "(healthy), whether the root consumes a topic, all signals in the incident and when it started."
+        ),
+        cypher="""
+MATCH (:Alert {incident_id: $id})-[:FIRED_ON]->(s:Service)
+WITH collect(DISTINCT s.name) AS alerting
+MATCH (a:Alert {incident_id: $id})-[:FIRED_ON]->(r:Service)
+OPTIONAL MATCH (r)-[:CALLS*1..4]->(d:Service)
+WHERE d.name IN alerting
+WITH alerting, r, collect(DISTINCT a.signal) AS root_signals, count(d) AS deeper
+WHERE deeper = 0
+OPTIONAL MATCH (r)-[:CALLS]->(callee:Service)
+WHERE NOT callee.name IN alerting
+OPTIONAL MATCH (r)-[:CONSUMES]->(t:Topic)
+WITH alerting, r, root_signals, count(DISTINCT callee) AS healthy_callees, count(DISTINCT t) > 0 AS consumes
+MATCH (x:Alert {incident_id: $id})
+RETURN r.name AS root, root_signals, healthy_callees, consumes, alerting,
+       collect(DISTINCT x.signal) AS signals, min(x.ts) AS started
+""".strip(),
+        example_params={"id": "INC-1031"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="change_facts",
+        code="M2",
+        title="Change facts for a commit",
+        explain=(
+            "Facts for the change, author and trigger features, and the detector input for one commit: every "
+            "config key it changed (kind, old, new, the callee p99 at the time, whether the key sits on a "
+            "sync "
+            "CALLS edge), the files it touched, the author's kind (human or agent), its PR and when it was "
+            "deployed."
+        ),
+        cypher="""
+MATCH (c:Commit {id: 'commit:' + substring($sha, 0, 7)})
+OPTIONAL MATCH (c)-[:AUTHORED_BY]->(who:Engineer)
+OPTIONAL MATCH (c)-[ch:CHANGES]->(k:ConfigKey)
+OPTIONAL MATCH (k)-[:CONFIGURES]->(:Service)-[e:CALLS]->(callee:Service)<-[:TARGETS]-(k)
+WITH c, who, collect(DISTINCT {service: k.service, key: k.key, kind: k.kind, old: ch.old, new: ch.new,
+     p99_at_change: coalesce(ch.callee_p99_at_change, e.p99_ms), sha: c.sha,
+     sync: callee IS NOT NULL}) AS changes
+OPTIONAL MATCH (c)-[:TOUCHES]->(f:File)
+OPTIONAL MATCH (d:Deploy)-[:SHIPS]->(c)
+OPTIONAL MATCH (pr:PR)-[:CONTAINS]->(c)
+RETURN c.sha AS sha, c.id AS commit_id, who.handle AS author, who.kind AS author_kind,
+       [x IN changes WHERE x.service IS NOT NULL] AS changes, collect(DISTINCT f.path) AS files,
+       collect(DISTINCT d.ts) AS deploy_ts, collect(DISTINCT pr.number) AS prs
+""".strip(),
+        example_params={"sha": "9f2c1ab"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="incident_cause",
+        code="M3",
+        title="Known cause of an incident",
+        explain=(
+            "The commit an incident is pinned on, if anyone has said so yet: a confirmed CAUSED_BY edge "
+            "first, "
+            "otherwise the commit in the evidence of the Cause agent's best finding."
+        ),
+        cypher="""
+MATCH (i:Incident {id: 'inc:' + $id})
+CALL {
+  WITH i
+  MATCH (i)-[:CAUSED_BY]->(c:Commit)
+  RETURN c.sha AS sha, 0 AS rank, 1.0 AS confidence
+  UNION
+  WITH i
+  MATCH (i)<-[:FOR]-(:Investigation)-[:HAS_FINDING]->(f:Finding {agent: 'cause'})-[:EVIDENCE]->(c:Commit)
+  RETURN c.sha AS sha, 1 AS rank, f.confidence AS confidence
+}
+RETURN sha, rank, confidence
+ORDER BY rank, confidence DESC
+LIMIT 1
+""".strip(),
+        example_params={"id": "INC-1004"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="finding_commit",
+        code="M4",
+        title="Commit cited by a finding",
+        explain=(
+            "Which commit a finding points at: a Commit in its EVIDENCE edges, else a commit id in its "
+            "node_ids, else the sha in its params. Used when a human confirms the root cause."
+        ),
+        cypher="""
+MATCH (f:Finding {id: $finding_id})
+OPTIONAL MATCH (f)-[:EVIDENCE]->(c:Commit)
+OPTIONAL MATCH (n:Commit)
+WHERE n.id IN coalesce(f.node_ids, [])
+RETURN f.id AS finding, f.params AS params, collect(DISTINCT c.sha) AS evidence,
+       collect(DISTINCT n.sha) AS cited
+""".strip(),
+        example_params={"finding_id": "find:INC-1031-1-4"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="write_features",
+        code="M5",
+        title="Write incident features",
+        explain=(
+            "Replace an incident's HAS_FEATURE edges with the freshly extracted set. Features are shared "
+            "nodes (feat:<name>), so two incidents with the same shape point at the same Feature node."
+        ),
+        cypher="""
+MATCH (i:Incident {id: 'inc:' + $id})
+OPTIONAL MATCH (i)-[old:HAS_FEATURE]->(:Feature)
+DELETE old
+WITH DISTINCT i
+UNWIND $features AS x
+MERGE (f:Feature {id: 'feat:' + x.name})
+ON CREATE SET f.name = x.name, f.kind = x.kind
+MERGE (i)-[:HAS_FEATURE]->(f)
+RETURN count(f) AS features
+""".strip(),
+        example_params={"id": "INC-1031", "features": [{"name": "author:agent", "kind": "author"}]},
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="detector_backtest",
+        code="Q12",
+        title="Detector backtest input",
+        explain=(
+            "Every historical config change (each CHANGES edge) in the detector input shape, with the callee "
+            "p99 at the time of the change. A detector's stored Cypher is run over this list to count how "
+            "many past changes it would have fired on: 'fires on 1 of 40 past config changes'."
+        ),
+        cypher="""
+MATCH (c:Commit)-[ch:CHANGES]->(k:ConfigKey)
+RETURN collect({service: k.service, key: k.key, old: ch.old, new: ch.new,
+                p99_at_change: ch.callee_p99_at_change, sha: c.sha}) AS changes,
+       count(ch) AS total
+""".strip(),
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="active_detectors",
+        code="M6",
+        title="Active detectors",
+        explain=(
+            "Procedural memory: every active Detector with its stored Cypher and params, the FailurePattern "
+            "it detects, and the active Lesson about that pattern with the incident it was learned from and "
+            "that incident's cause (commit and PR). check_changes runs each stored Cypher on proposed "
+            "changes."
+        ),
+        cypher="""
+MATCH detects = (d:Detector {status: 'active'})-[:DETECTS]->(p:FailurePattern)
+OPTIONAL MATCH lesson = (p)<-[:ABOUT]-(l:Lesson {status: 'active'})-[:LEARNED_FROM]->(i:Incident)
+OPTIONAL MATCH cause = (i)-[:CAUSED_BY]->(:Commit)<-[:CONTAINS]-(:PR)
+RETURN d.id AS detector_id, d.template AS template, d.cypher AS cypher, d.params AS params,
+       p.name AS pattern, l.id AS lesson_id, l.text AS lesson_text, l.confidence AS confidence,
+       i.id AS incident_id, i.started_at AS learned_at, detects, lesson, cause
+ORDER BY detector_id, learned_at
+""".strip(),
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="set_backtest",
+        code="M7",
+        title="Store a detector's backtest",
+        explain="Store how many past config changes a detector fires on (backtest_hits / backtest_total).",
+        cypher="""
+MATCH (d:Detector {id: $detector_id})
+SET d.backtest_hits = $hits, d.backtest_total = $total
+RETURN d.id AS detector_id
+""".strip(),
+        example_params={"detector_id": "det:D-1", "hits": 1, "total": 40},
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="memory_ids",
+        code="M8",
+        title="Lesson and detector ids in use",
+        explain=(
+            "All Lesson and Detector ids, so a new lesson gets the next free number (L-1, D-1 in the demo), "
+            "plus any live lesson already learned from this incident (confirming twice must not duplicate)."
+        ),
+        cypher="""
+OPTIONAL MATCH (l:Lesson)
+WITH collect(l.id) AS lessons
+OPTIONAL MATCH (d:Detector)
+WITH lessons, collect(d.id) AS detectors
+OPTIONAL MATCH (mine:Lesson)-[:LEARNED_FROM]->(:Incident {id: 'inc:' + $id})
+RETURN lessons, detectors, collect(mine.id) AS learned_from_incident
+""".strip(),
+        example_params={"id": "INC-1031"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="pattern_memory",
+        code="M9",
+        title="Memory for a failure pattern",
+        explain=(
+            "The active lesson and active detector we already have for a failure pattern. If both exist, a "
+            "new incident of that pattern reinforces them instead of minting new ones."
+        ),
+        cypher="""
+OPTIONAL MATCH (p:FailurePattern {id: $pattern_id})
+OPTIONAL MATCH (l:Lesson {status: 'active'})-[:ABOUT]->(p)
+OPTIONAL MATCH (d:Detector {status: 'active'})-[:DETECTS]->(p)
+RETURN collect(DISTINCT l.id) AS lessons, collect(DISTINCT d.id) AS detectors
+""".strip(),
+        example_params={"pattern_id": "pat:timeout_below_p99"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="write_lesson",
+        code="M10",
+        title="Write a lesson",
+        explain=(
+            "Semantic memory write-back when a human confirms the root cause: the incident becomes resolved "
+            "and CAUSED_BY the commit; a Lesson (LEARNED_FROM the incident, ABOUT its FailurePattern) and a "
+            "Decision (FROM the lesson) are merged. An existing lesson is reinforced instead: one more "
+            "LEARNED_FROM edge, uses + 1 and confidence + 0.1 (max 0.95)."
+        ),
+        cypher="""
+MATCH (i:Incident {id: 'inc:' + $id})
+MATCH (c:Commit {id: $commit_id})
+SET i.status = 'resolved', i.resolved_at = coalesce(i.resolved_at, $now), i.fix = $fix
+MERGE (i)-[:CAUSED_BY]->(c)
+MERGE (p:FailurePattern {id: $pattern_id})
+ON CREATE SET p.name = $pattern, p.description = $pattern_description
+MERGE (l:Lesson {id: $lesson_id})
+ON CREATE SET l.name = $lesson_name, l.text = $text, l.status = 'active', l.source = 'live',
+              l.created_at = $now, l.confidence = 0.6, l.uses = 0, l.prevented = 0
+ON MATCH SET l.uses = l.uses + $reinforce,
+             l.confidence = toFloat(round(CASE WHEN l.confidence + 0.1 * $reinforce > 0.95 THEN 0.95
+                                               ELSE l.confidence + 0.1 * $reinforce END * 100)) / 100
+MERGE (l)-[:LEARNED_FROM]->(i)
+MERGE (l)-[:ABOUT]->(p)
+MERGE (dec:Decision {id: $decision_id})
+ON CREATE SET dec.name = $decision_title, dec.title = $decision_title, dec.text = $decision_text,
+              dec.created_at = $now
+MERGE (dec)-[:FROM]->(l)
+RETURN l.id AS lesson_id, l.text AS text, l.confidence AS confidence, l.uses AS uses
+""".strip(),
+        example_params={
+            "id": "INC-1031",
+            "commit_id": "commit:9f2c1ab",
+            "fix": "revert PR #12",
+            "now": ACT1_ALERT_TS + 900_000,
+            "pattern_id": "pat:timeout_below_p99",
+            "pattern": "timeout_below_p99",
+            "pattern_description": "...",
+            "lesson_id": "lesson:L-1",
+            "lesson_name": "L-1",
+            "text": "...",
+            "reinforce": 0,
+            "decision_id": "dec:timeouts-at-least-1-5x-callee-p99",
+            "decision_title": "...",
+            "decision_text": "...",
+        },
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="write_detector",
+        code="M11",
+        title="Write a detector",
+        explain=(
+            "Procedural memory write-back: store the chosen detector template's Cypher and params on a "
+            "Detector node that DETECTS the failure pattern, with its backtest result. From now on "
+            "check_changes runs this stored Cypher on every proposed change."
+        ),
+        cypher="""
+MATCH (p:FailurePattern {id: $pattern_id})
+MERGE (d:Detector {id: $detector_id})
+ON CREATE SET d.created_at = $now, d.source = 'live', d.learned_from = $id
+SET d.name = $name, d.template = $template, d.cypher = $cypher, d.params = $params, d.status = 'active',
+    d.backtest_hits = $hits, d.backtest_total = $total
+MERGE (d)-[:DETECTS]->(p)
+RETURN d.id AS detector_id
+""".strip(),
+        example_params={
+            "id": "INC-1031",
+            "pattern_id": "pat:timeout_below_p99",
+            "detector_id": "det:D-1",
+            "name": "D-1 timeout_below_p99",
+            "template": "timeout_below_p99",
+            "cypher": "...",
+            "params": '{"factor": 1.5}',
+            "hits": 1,
+            "total": 40,
+            "now": ACT1_ALERT_TS + 900_000,
+        },
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="lesson_evidence",
+        code="M12",
+        title="Lesson evidence",
+        explain=(
+            "Why a lesson exists, as a subgraph: lesson -> incident -> cause commit -> changed config key, "
+            "the "
+            "PR and author of that commit, the pattern and the detector that guards it, and the decision "
+            "taken from the lesson."
+        ),
+        cypher="""
+MATCH (l:Lesson {id: $lesson_id})
+OPTIONAL MATCH learned = (l)-[:LEARNED_FROM]->(i:Incident)-[:CAUSED_BY]->(c:Commit)-[:CHANGES]->(:ConfigKey)
+OPTIONAL MATCH authored = (:PR)-[:CONTAINS]->(c)-[:AUTHORED_BY]->(:Engineer)
+OPTIONAL MATCH guarded = (l)-[:ABOUT]->(:FailurePattern)<-[:DETECTS]-(:Detector)
+OPTIONAL MATCH decided = (:Decision)-[:FROM]->(l)
+RETURN l.id AS lesson_id, l.text AS text, l.confidence AS confidence, collect(DISTINCT learned) AS learned,
+       collect(DISTINCT authored) AS authored, collect(DISTINCT guarded) AS guarded,
+       collect(DISTINCT decided) AS decided
+""".strip(),
+        example_params={"lesson_id": "lesson:L-1017"},
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="guard_outcome",
+        code="M13",
+        title="Record a PR Guard outcome",
+        explain=(
+            "Close the loop with our SDE agents: PR -[:WARNED_WITH|APPLIED|IGNORED]-> Lesson. 'warned' "
+            "counts "
+            "a use; 'applied' (the PR followed the lesson) adds 0.2 confidence, prevented + 1, and the PR "
+            "IMPLEMENTS the lesson's decision; 'ignored' just records the override. Each edge is written "
+            "once "
+            "per PR and lesson, so retries don't double count."
+        ),
+        cypher="""
+MERGE (pr:PR {id: $pr_id})
+ON CREATE SET pr.number = $number, pr.name = '#' + toString($number)
+WITH pr
+MATCH (l:Lesson {id: $lesson_id})
+OPTIONAL MATCH (pr)-[seen]->(l)
+WHERE type(seen) = $rel
+WITH pr, l, count(seen) = 0 AS first
+FOREACH (_ IN CASE WHEN first AND $rel = 'WARNED_WITH' THEN [1] ELSE [] END |
+  MERGE (pr)-[:WARNED_WITH]->(l)
+  SET l.uses = l.uses + 1)
+FOREACH (_ IN CASE WHEN first AND $rel = 'APPLIED' THEN [1] ELSE [] END |
+  MERGE (pr)-[:APPLIED]->(l)
+  SET l.prevented = l.prevented + 1,
+      l.confidence = toFloat(round(CASE WHEN l.confidence + 0.2 > 1.0 THEN 1.0
+                                        ELSE l.confidence + 0.2 END * 100)) / 100)
+FOREACH (_ IN CASE WHEN first AND $rel = 'IGNORED' THEN [1] ELSE [] END |
+  MERGE (pr)-[:IGNORED]->(l))
+WITH pr, l, first
+OPTIONAL MATCH (d:Decision)-[:FROM]->(l)
+FOREACH (_ IN CASE WHEN first AND $rel = 'APPLIED' AND d IS NOT NULL THEN [1] ELSE [] END |
+  MERGE (pr)-[:IMPLEMENTS]->(d))
+RETURN DISTINCT l.id AS lesson_id, l.confidence AS confidence, l.uses AS uses, l.prevented AS prevented, first
+""".strip(),
+        example_params={"pr_id": "pr:15", "number": 15, "lesson_id": "lesson:L-1", "rel": "APPLIED"},
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="set_incident_embedding",
+        code="M14",
+        title="Store an incident embedding",
+        explain="Store the Voyage embedding of an incident's summary (vector index on Incident.embedding).",
+        cypher="MATCH (i:Incident {id: 'inc:' + $id}) SET i.embedding = vecf32($vec) RETURN i.id AS id",
+        example_params={"id": "INC-1031", "vec": [0.0]},
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="set_lesson_embedding",
+        code="M15",
+        title="Store a lesson embedding",
+        explain="Store the Voyage embedding of a lesson's text (vector index on Lesson.embedding).",
+        cypher="MATCH (l:Lesson {id: $lesson_id}) SET l.embedding = vecf32($vec) RETURN l.id AS id",
+        example_params={"lesson_id": "lesson:L-1", "vec": [0.0]},
+        read_only=False,
+        internal=True,
+    )
+)
+
+register(
+    CatalogQuery(
+        id="incident_text",
+        code="M16",
+        title="Incident text",
+        explain="An incident's title, summary, status and whether it already has an embedding.",
+        cypher="""
+MATCH (i:Incident {id: 'inc:' + $id})
+RETURN i.title AS title, i.summary AS summary, i.embedding IS NOT NULL AS embedded, i.status AS status
+""".strip(),
+        example_params={"id": "INC-1031"},
+        internal=True,
     )
 )
