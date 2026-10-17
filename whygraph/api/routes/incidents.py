@@ -1,4 +1,4 @@
-"""Incidents, the live agent stream and the resolve flow. Owners: F-B1 (stream), F-B4 (resolve)."""
+"""Incidents, the live agent stream and the resolve flow."""
 
 import asyncio
 import json
@@ -6,11 +6,12 @@ from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from whygraph.agents.blackboard import Board
 from whygraph.agents.events import get_bus, to_sse
 from whygraph.agents.orchestrator import start_investigation
-from whygraph.api.routes._stub import not_implemented
+from whygraph.agents.resolve import ResolveError, resolve
 from whygraph.graph import client
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -66,7 +67,17 @@ async def investigate(incident_id: str) -> dict:
     return {"incident_id": incident_id, "started": started}
 
 
+class ResolveIn(BaseModel):
+    fix: str  # what fixed it, in a sentence: becomes the lesson's fix
+    cause_finding_id: str | None = None  # defaults to Cause's root-cause finding
+    resolved_by: str | None = None  # engineer handle
+
+
 @router.post("/{incident_id}/resolve")
-def resolve_incident(incident_id: str) -> dict:
-    # F-B4: confirm root cause + fix -> Memory writes Lesson, Decision, Detector.
-    raise not_implemented("F-B4 feat/agents-memory-comms")
+async def resolve_incident(incident_id: str, body: ResolveIn) -> dict:
+    """Confirm root cause + fix: closes the incident and has Memory write the lesson and detector."""
+    _require_db()
+    try:
+        return await resolve(incident_id, body.fix, body.cause_finding_id, body.resolved_by)
+    except ResolveError as e:
+        raise HTTPException(409, str(e)) from None

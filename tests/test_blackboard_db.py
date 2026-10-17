@@ -49,3 +49,30 @@ def test_finding_round_trip_with_evidence_edges(graph):
     steps = graph.query("MATCH (:Investigation {id:$inv})-[:STEP]->(s:AgentStep) RETURN s.tool", {"inv": inv})
     assert steps.result_set == [["service_neighbors"]]
     assert board.open_investigation("INC-9", graph_only=False) == "inv:INC-9-2"
+
+
+def test_status_message_and_resolution(graph):
+    graph.query(
+        "CREATE (:Incident {id:'inc:INC-9', status:'open'}), (:Engineer {id:'eng:priya'}), "
+        "(:Commit {id:'commit:abc1234'})"
+    )
+    board = Board(graph.name)
+    board.write_message(
+        "INC-9",
+        "msg:INC-9-1-status",
+        "#incidents",
+        "checkout is failing",
+        "why-graph",
+        ["eng:priya", "eng:nobody"],
+    )
+    board.mark_resolved("INC-9", "revert PR #12", "commit:abc1234", "priya")
+
+    rows = graph.query(
+        "MATCH (m:ChatMessage)-[:ABOUT]->(i:Incident), (m)-[:PAGES]->(e:Engineer) RETURN m.text, i.id, e.id"
+    ).result_set
+    assert rows == [["checkout is failing", "inc:INC-9", "eng:priya"]]
+    rows = graph.query(
+        "MATCH (e:Engineer)-[:RESOLVED]->(i:Incident)-[:CAUSED_BY]->(c:Commit) "
+        "RETURN i.status, i.fix, c.id, e.id"
+    ).result_set
+    assert rows == [["resolved", "revert PR #12", "commit:abc1234", "eng:priya"]]
