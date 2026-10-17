@@ -1,0 +1,31 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# node
+node_modules/
+ui/dist/
+
+# runtime data
+data/
+scenarios/recordings/live/
+*.log
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
+
+# local tool config
+.claude/

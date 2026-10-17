@@ -1,0 +1,29 @@
+services:
+  falkordb:
+    image: ${FALKORDB_IMAGE:-falkordb/falkordb:latest}
+    ports:
+      - "6379:6379"   # FalkorDB (Redis protocol)
+      - "3000:3000"   # FalkorDB Browser
+    volumes:
+      - falkordb-data:/var/lib/falkordb/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Full stack: `docker compose --profile app up --build`
+  api:
+    profiles: ["app"]
+    build: .
+    env_file: .env
+    environment:
+      FALKORDB_HOST: falkordb
+    ports:
+      - "8000:8000"
+    depends_on:
+      falkordb:
+        condition: service_healthy
+
+volumes:
+  falkordb-data:
