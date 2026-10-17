@@ -1,7 +1,8 @@
 # Feature board
 
-Each row is **one branch and one PR**. Owners: **A** = Graph & Memory, **B** = Agents & Integrations,
-**C** = UI, demo app & deploy. The full design is in [plan.md](plan.md).
+Each row is **one branch and one PR**. Owners: **A** = Graph & Memory (**Shoban**), **B** = Agents &
+Integrations (**Solai**), **C** = UI, demo app & deploy (**Sakthi**). Per-person build guide with specs and
+signatures: [work-split.md](work-split.md). The full design is in [plan.md](plan.md).
 
 **Rule for parallel work: only touch the files listed for your feature.**
 - Shared contract files need a heads-up in the PR: `docs/schema.md`, `docs/events.md`,
@@ -24,7 +25,7 @@ Each row is **one branch and one PR**. Owners: **A** = Graph & Memory, **B** = A
 
 | ID | Owner | Branch | Files | Depends on | Done when |
 |---|---|---|---|---|---|
-| F-A3 | A | `feat/memory-core` | `whygraph/graph/features.py`, `whygraph/memory/detectors.py`, `whygraph/memory/lessons.py`, `tests/test_scenarios.py` | F-A2 | Features + Q4 similarity; Detector templates with self-validate + backtest (Q12); Lesson/Decision write-back; Act 1 best match < 0.5, Act 2 detector fires |
+| F-A3 | A | `feat/memory-core` | `whygraph/graph/features.py`, `whygraph/memory/{similarity,detectors,lessons}.py`, `tests/test_scenarios.py` | F-A2 | Features + Q4 similarity; Detector templates with self-validate + backtest (Q12); Lesson/Decision write-back; Act 1 best match < 0.5, Act 2 detector fires |
 | F-A4 | A | `feat/snapshots` | `scripts/reset_to.py` | F-A1 | `reset_to.py act1` restores the graph state before Act 1 (GRAPH.COPY or reseed) |
 | F-B4 | B | `feat/agents-memory-comms` | `whygraph/agents/memory.py`, `whygraph/agents/comms.py`, resolve route in `routes/incidents.py` | F-A3, F-B3 | Memory + Comms findings; "Confirm root cause" writes Lesson + Detector and emits `memory.lesson_written` |
 | F-B5 | B | `feat/mcp` | `whygraph/integrations/mcp_server.py`, `scenarios/sde-agent-kit.md` | F-A3 | `/mcp` serves `check_change_risk`, `who_knows`, `why_is`, `get_service_context`; our SDE agents connect |

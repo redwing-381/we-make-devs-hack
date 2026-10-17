@@ -4,8 +4,9 @@ There are three of us and about 30 hours, so the workflow is built for parallel 
 
 ## Flow
 
-1. Pick your next row in [docs/features.md](docs/features.md). Owners: **A** Graph & Memory,
-   **B** Agents & Integrations, **C** UI, demo app & deploy.
+1. Read your section of [docs/work-split.md](docs/work-split.md), then pick your next row in
+   [docs/features.md](docs/features.md). Owners: **A** Shoban (Graph & Memory), **B** Solai (Agents &
+   Integrations), **C** Sakthi (UI, demo app & deploy).
 2. Branch from fresh `main`:
    ```bash
    git switch main && git pull && git switch -c feat/<name>
