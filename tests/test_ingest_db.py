@@ -34,6 +34,14 @@ def test_alerts_group_into_incidents(graph):
     assert graph.query("MATCH (a:Alert) RETURN count(a)").result_set == [[3]]
 
 
+def test_alert_with_stale_ts_opens_its_own_incident(graph):
+    g = graph.name
+    assert ingest_alert(alert("checkout", T, "a1"), g) == ("INC-1031", True)
+    assert ingest_alert(alert("cart", 1, "stale"), g) == ("INC-1032", True)  # ts far before the open incident
+    assert ingest_alert(alert("frontend", T - 60_000, "early"), g) == ("INC-1031", False)  # early, in window
+    assert ingest_alert(alert("frontend", T - 3 * 60_000, "too-early"), g) == ("INC-1033", True)
+
+
 def test_deploy_records_change_with_callee_p99_at_change(graph):
     g = graph.name
     ingest_telemetry(

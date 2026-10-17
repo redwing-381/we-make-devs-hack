@@ -49,7 +49,7 @@ def next_incident_id(graph: str | None = None) -> str:
 
 
 def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
-    """MERGE the alert and attach it to an open incident from the last 2 minutes, or open a new one.
+    """MERGE the alert and attach it to an open incident within 2 minutes of it, or open a new one.
 
     Returns (incident_id, created).
     """
@@ -61,10 +61,12 @@ def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
         if known.rows and known.rows[0]["inc"]:
             return known.rows[0]["inc"], False
 
+        # within the window on both sides, so a stale or garbage ts can't join today's incident
         open_ = client.run(
-            "MATCH (i:Incident {status: 'open'}) WHERE i.last_alert_at >= $since "
+            "MATCH (i:Incident {status: 'open'}) "
+            "WHERE i.last_alert_at >= $ts - $window AND i.last_alert_at <= $ts + $window "
             "RETURN i.id AS id, i.severity AS severity ORDER BY i.last_alert_at DESC LIMIT 1",
-            {"since": alert.ts - GROUP_WINDOW_MS},
+            {"ts": alert.ts, "window": GROUP_WINDOW_MS},
             graph=graph,
         )
         created = not open_.rows
