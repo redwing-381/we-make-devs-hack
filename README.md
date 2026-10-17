@@ -11,7 +11,8 @@ FalkorDB, Oct 15–18 2026).
 2. Agent Memory and Coordination
 3. Company Brain
 
-> Status: base scaffold. Features land as PRs; see [docs/features.md](docs/features.md).
+> Status: base scaffold. Features land as PRs. Who builds what: [docs/work-split.md](docs/work-split.md) ·
+> feature board: [docs/features.md](docs/features.md).
 
 ## What it does
 
