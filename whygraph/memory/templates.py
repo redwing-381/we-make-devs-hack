@@ -37,7 +37,7 @@ MATCH path = (k:ConfigKey {service: ch.service, key: ch.key})-[:CONFIGURES]->(a:
 MATCH target = (k)-[:TARGETS]->(b)
 WHERE k.kind = 'timeout'
 WITH ch, a, b, path, target, coalesce(ch.p99_at_change, e.p99_ms) AS p99
-WHERE toFloat(ch.new) < p99 * $factor
+WHERE toFloat(toString(ch.new)) < p99 * $factor
 RETURN ch.service AS service, ch.key AS key, ch.new AS proposed, toInteger(ceil(p99 * $factor)) AS safe_min,
        a.name AS caller, b.name AS callee, p99, ch.sha AS sha, path, target
 """.strip(),
@@ -52,8 +52,10 @@ RETRIES_WITHOUT_BACKOFF = DetectorTemplate(
     cypher="""
 UNWIND $changes AS ch
 MATCH path = (k:ConfigKey {service: ch.service, key: ch.key})-[:CONFIGURES]->(a:Service)
-WHERE k.kind = 'retries' AND toFloat(ch.new) > $max_retries
-  AND (ch.old IS NULL OR toFloat(ch.new) > toFloat(ch.old))
+WHERE k.kind = 'retries'
+WITH ch, k, a, path
+WHERE toFloat(toString(ch.new)) > $max_retries
+  AND (ch.old IS NULL OR toFloat(toString(ch.new)) > toFloat(toString(ch.old)))
 OPTIONAL MATCH target = (k)-[:TARGETS]->(b:Service)
 RETURN ch.service AS service, ch.key AS key, ch.new AS proposed, null AS safe_min,
        a.name AS caller, b.name AS callee, null AS p99, ch.sha AS sha, path, target
@@ -70,7 +72,8 @@ POOL_BELOW_CONCURRENCY = DetectorTemplate(
 UNWIND $changes AS ch
 MATCH path = (k:ConfigKey {service: ch.service, key: ch.key})-[:CONFIGURES]->(a:Service)
 WHERE k.kind = 'pool' AND a.peak_concurrency IS NOT NULL
-  AND toFloat(ch.new) < a.peak_concurrency * $factor
+WITH ch, k, a, path
+WHERE toFloat(toString(ch.new)) < a.peak_concurrency * $factor
 OPTIONAL MATCH target = (k)-[:TARGETS]->(b:Service)
 RETURN ch.service AS service, ch.key AS key, ch.new AS proposed,
        toInteger(ceil(a.peak_concurrency * $factor)) AS safe_min,

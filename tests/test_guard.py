@@ -1,3 +1,5 @@
+import sys
+
 from whygraph.integrations.guard import MEMORY_PENDING, Memory, check_change_risk, default_memory
 from whygraph.models.events import ChangeRiskRequest, RiskWarning
 
@@ -23,7 +25,8 @@ def lesson_warning(**overrides):
     return RiskWarning(**{**w, **overrides})
 
 
-def test_no_memory_core_yet_says_so():
+def test_no_memory_core_yet_says_so(monkeypatch):
+    monkeypatch.setitem(sys.modules, "whygraph.memory.detectors", None)  # as if F-A3 weren't merged
     memory = default_memory()
     assert memory.pending  # whygraph.memory.detectors is F-A3
     res = check_change_risk(ACT2, memory=memory)
