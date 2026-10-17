@@ -8,7 +8,7 @@ suspect commit's config changes.
 
 Uses Shoban's memory core (F-A3) when it exists, through `MemoryPort`; until then the port falls back to stubs
 and to the catalog rows alone. Catalog queries read (columns per docs/work-split.md §4):
-  similar_incidents(id)  -> incident, jaccard, shared, lesson, fix, path   (feature-Jaccard part of Q4)
+  similar_incidents(id)  -> incident, title, shared, jaccard, fix, lesson_id, evidence, lesson
   config_vs_reality(sha) -> caller, callee, key, old, new, callee_p99_at_change, below_p99, path
 """
 
@@ -109,7 +109,7 @@ class MemoryAgent(BaseAgent):
                     "incident": r["incident"],
                     "score": float(r.get("jaccard") or 0),
                     "shared": r.get("shared") or [],
-                    "lesson": r.get("lesson"),
+                    "lesson": r.get("lesson_id"),
                     "fix": r.get("fix"),
                 }
                 for r in sorted(out.rows, key=lambda r: -(r.get("jaccard") or 0))

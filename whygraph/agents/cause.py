@@ -2,7 +2,8 @@
 
 Reads catalog queries (columns per docs/work-split.md §4 F-A2):
   suspect_changes(root, alert_ts, window_ms)
-      -> sha, message, author, author_kind, service, hops, mins_before, score, path
+      -> sha, message, author, kind, service, via, deploy, minutes_before, hops, prior, score,
+         path, author_path, config, pr
          (deploys to the root service or anything it depends on, ranked by recency, distance, past failures)
   config_vs_reality(sha)
       -> caller, callee, key, old, new, callee_p99_at_change, below_p99, path
@@ -91,13 +92,14 @@ board). Your job: find the change that broke the root service.
             return
         top = sc.rows[0]
         who = top.get("author") or "unknown"
-        if top.get("author_kind") == "agent":
+        if (top.get("kind") or top.get("author_kind")) == "agent":
             who += " (AI agent)"
         hops = top.get("hops", 0)
         sha, target = short(top.get("sha")), top.get("service", s["root"])
         claim = (
             f"Top suspect: commit {sha} by {who}, deployed to {target} "
-            f"{top.get('mins_before', '?')} min before the alert, {hops} hop{'s' if hops != 1 else ''} "
+            f"{top.get('minutes_before', top.get('mins_before', '?'))} min before the alert, "
+            f"{hops} hop{'s' if hops != 1 else ''} "
             f"from {s['root']}."
         )
         if len(sc.rows) > 1:
