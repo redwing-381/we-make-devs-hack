@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from fastapi.testclient import TestClient
 
 from whygraph.api.main import app
@@ -41,9 +42,38 @@ def test_replay_rejects_path_traversal():
     assert client.get("/api/replay/..%2Fsecrets").status_code in (400, 404)
 
 
+def test_replay_lists_and_streams_live_recordings(monkeypatch, tmp_path):
+    from whygraph.config import get_settings
+
+    fixture = get_settings().recordings_dir / "act1-fixture.jsonl"
+    (tmp_path / "live").mkdir()
+    (tmp_path / "act1-fixture.jsonl").write_bytes(fixture.read_bytes())
+    (tmp_path / "live" / "INC-1031.jsonl").write_bytes(fixture.read_bytes())
+    (tmp_path / "live" / "bad.name.jsonl").write_bytes(fixture.read_bytes())  # not replayable, not listed
+    monkeypatch.setattr(get_settings(), "recordings_dir", tmp_path)
+
+    assert client.get("/api/replay").json() == ["act1-fixture", "live/INC-1031"]
+    events = client.get("/api/replay/live/INC-1031").json()
+    assert events == client.get("/api/replay/act1-fixture").json()
+    # the UI encodes the name, so live%2FINC-1031 must reach the same route
+    with client.stream("GET", "/api/replay/live%2FINC-1031/stream?speed=20") as r:
+        data = [json.loads(line[6:]) for line in r.iter_lines() if line.startswith('data: {"seq"')]
+    assert [e["seq"] for e in data] == [e["seq"] for e in events]
+    assert client.get("/api/replay/live/INC-9999").status_code == 404
+    assert client.get("/api/replay/INC-1031").status_code == 404  # live runs only under live/
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["/api/replay/live/..%2F..%2Fsecrets", "/api/replay/live/bad.name", "/api/replay/live/%2E%2E/stream"],
+)
+def test_live_replay_rejects_path_traversal(url):
+    assert client.get(url).status_code in (400, 404)
+
+
 def test_stubs_and_ingest_without_db():
-    alert = {"service": "checkout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
-    assert client.post("/api/alerts", json=alert).status_code in (202, 503)  # 503 without FalkorDB
+    alert = {"service": "no-such-service", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
+    assert client.post("/api/alerts", json=alert).status_code in (422, 503)  # 503 without FalkorDB
     assert client.post("/api/brain/ask", json={"question": "who knows checkout?"}).status_code in (200, 503)
 
 
@@ -59,3 +89,17 @@ def test_incident_stream_serves_bus_history():
     with client.stream("GET", "/api/incidents/INC-API/stream") as r:
         lines = [line for line in r.iter_lines() if line.startswith('data: {"seq"')]
     assert len(lines) == 1 and '"agent.started"' in lines[0]
+
+
+def test_alert_on_unknown_service_is_422(monkeypatch):
+    from whygraph.api.routes import ingest as route
+    from whygraph.integrations.ingest import UnknownServiceError
+
+    def reject(alert):
+        raise UnknownServiceError(f"unknown service {alert.service!r}")
+
+    monkeypatch.setattr(route.client, "ping", lambda: True)
+    monkeypatch.setattr(route, "ingest_alert", reject)
+    alert = {"service": "chekout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
+    r = client.post("/api/alerts", json=alert)
+    assert r.status_code == 422 and "chekout" in r.json()["detail"]

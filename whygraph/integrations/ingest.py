@@ -3,8 +3,10 @@
 All writes are idempotent MERGEs on stable ids, so a retried POST never duplicates anything.
 """
 
+import logging
 import re
 import threading
+from collections.abc import Iterable
 from typing import Any
 
 from whygraph.graph import client
@@ -20,6 +22,11 @@ KIND_BY_PREFIX = {"timeouts_ms": "timeout", "retries": "retries", "pool_size": "
 TARGETED = {"timeouts_ms", "retries"}
 
 _alert_lock = threading.Lock()  # alert grouping is read-then-write; keep it single-file
+log = logging.getLogger(__name__)
+
+
+class UnknownServiceError(ValueError):
+    """An event names a service the graph doesn't know; ingest never invents Service nodes from typos."""
 
 
 def _w(cypher: str, params: dict[str, Any], graph: str | None) -> client.QueryOutput:
@@ -39,6 +46,17 @@ def is_agent(author: str) -> bool:
     return bool(re.search(r"(bot|\[bot\])$", author, re.IGNORECASE))
 
 
+def known_services(names: Iterable[str], graph: str | None = None) -> set[str]:
+    """The subset of `names` that already exist as Service nodes."""
+    wanted = {svc(n): n for n in names}
+    if not wanted:
+        return set()
+    out = client.run(
+        "MATCH (s:Service) WHERE s.id IN $ids RETURN s.id AS id", {"ids": sorted(wanted)}, graph=graph
+    )
+    return {wanted[r["id"]] for r in out.rows}
+
+
 # --- alerts ---------------------------------------------------------------------------------
 
 
@@ -49,10 +67,13 @@ def next_incident_id(graph: str | None = None) -> str:
 
 
 def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
-    """MERGE the alert and attach it to an open incident from the last 2 minutes, or open a new one.
+    """MERGE the alert and attach it to an open incident within 2 minutes of it, or open a new one.
 
-    Returns (incident_id, created).
+    Returns (incident_id, created). Raises UnknownServiceError if alert.service isn't a Service node.
     """
+    if not known_services([alert.service], graph):
+        log.warning("alert %s names unknown service %r; rejected", alert.id, alert.service)
+        raise UnknownServiceError(f"unknown service {alert.service!r}")
     alert_id = node_id("Alert", alert.id or f"a-{alert.service}-{alert.ts}")
     with _alert_lock:
         known = client.run(
@@ -61,10 +82,12 @@ def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
         if known.rows and known.rows[0]["inc"]:
             return known.rows[0]["inc"], False
 
+        # within the window on both sides, so a stale or garbage ts can't join today's incident
         open_ = client.run(
-            "MATCH (i:Incident {status: 'open'}) WHERE i.last_alert_at >= $since "
+            "MATCH (i:Incident {status: 'open'}) "
+            "WHERE i.last_alert_at >= $ts - $window AND i.last_alert_at <= $ts + $window "
             "RETURN i.id AS id, i.severity AS severity ORDER BY i.last_alert_at DESC LIMIT 1",
-            {"since": alert.ts - GROUP_WINDOW_MS},
+            {"ts": alert.ts, "window": GROUP_WINDOW_MS},
             graph=graph,
         )
         created = not open_.rows
@@ -78,11 +101,11 @@ def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
             title = None
 
         _w(
+            "MATCH (s:Service {id: $svc}) "
             "MERGE (i:Incident {id: $inc}) "
             "ON CREATE SET i.name = $name, i.title = $title, i.status = 'open', i.started_at = $ts "
             "SET i.severity = $severity, "
             "i.last_alert_at = CASE WHEN i.last_alert_at > $ts THEN i.last_alert_at ELSE $ts END "
-            "MERGE (s:Service {id: $svc}) ON CREATE SET s.name = $service "
             "MERGE (a:Alert {id: $alert}) "
             "SET a.name = $alert_name, a.signal = $signal, a.value = $value, a.threshold = $threshold, "
             "a.severity = $alert_severity, a.ts = $ts, a.source = $source, a.incident_id = $incident_id "
@@ -93,7 +116,6 @@ def ingest_alert(alert: AlertIn, graph: str | None = None) -> tuple[str, bool]:
                 "title": title or incident_id,
                 "severity": severity,
                 "svc": svc(alert.service),
-                "service": alert.service,
                 "alert": alert_id,
                 "alert_name": f"{alert_id.removeprefix('alert:')} {alert.signal} {alert.value:g}",
                 "signal": alert.signal,
@@ -133,7 +155,10 @@ def _change_params(sha_id: str, ch: ConfigChange, ts: int) -> dict[str, Any]:
 
 def ingest_deploy(deploy: DeployIn, graph: str | None = None) -> str:
     """Deploy -[:SHIPS]-> Commit (-[:AUTHORED_BY]-> Engineer, <-[:CONTAINS]- PR), Deploy -[:OF]-> Service, and
-    Commit -[:CHANGES {old, new, callee_p99_at_change}]-> ConfigKey for every services.yaml change."""
+    Commit -[:CHANGES {old, new, callee_p99_at_change}]-> ConfigKey for every services.yaml change.
+
+    Only links Service nodes that already exist: unknown services are logged and skipped, along with any
+    config change whose own service is unknown."""
     sha7 = deploy.sha[:7]
     commit_id, deploy_id = commit(deploy.sha), node_id("Deploy", sha7)
     message = deploy.message or ""
@@ -155,11 +180,15 @@ def ingest_deploy(deploy: DeployIn, graph: str | None = None) -> str:
         graph,
     )
     services = set(deploy.services) | {ch.service for ch in deploy.config_changes}
-    if services:
+    callees = {c for ch in deploy.config_changes if (c := config_callee(ch.key))}
+    known = known_services(services | callees, graph)
+    if unknown := sorted((services | callees) - known):
+        log.warning("deploy %s names unknown services %s; not linked", sha7, unknown)
+    if services & known:
         _w(
-            "MATCH (d:Deploy {id: $deploy}) UNWIND $services AS r "
-            "MERGE (s:Service {id: r.id}) ON CREATE SET s.name = r.name MERGE (d)-[:OF]->(s)",
-            {"deploy": deploy_id, "services": [{"id": svc(n), "name": n} for n in sorted(services)]},
+            "MATCH (d:Deploy {id: $deploy}) UNWIND $ids AS id "
+            "MATCH (s:Service {id: id}) MERGE (d)-[:OF]->(s)",
+            {"deploy": deploy_id, "ids": sorted(svc(n) for n in services & known)},
             graph,
         )
     if deploy.author:
@@ -192,10 +221,11 @@ def ingest_deploy(deploy: DeployIn, graph: str | None = None) -> str:
             graph,
         )
     for ch in deploy.config_changes:
+        if ch.service not in known:
+            continue
         p = _change_params(commit_id, ch, deploy.ts)
         _w(
-            "MATCH (c:Commit {id: $commit}) "
-            "MERGE (caller:Service {id: $caller}) ON CREATE SET caller.name = $service "
+            "MATCH (c:Commit {id: $commit}), (caller:Service {id: $caller}) "
             "MERGE (k:ConfigKey {id: $cfg}) "
             "ON CREATE SET k.service = $service, k.key = $key, k.kind = $kind, "
             "k.name = $cfg_name "
@@ -206,10 +236,9 @@ def ingest_deploy(deploy: DeployIn, graph: str | None = None) -> str:
             p,
             graph,
         )
-        if p["callee"]:
+        if p["callee"] in known:
             _w(
-                "MATCH (k:ConfigKey {id: $cfg}) "
-                "MERGE (callee:Service {id: $callee_id}) ON CREATE SET callee.name = $callee "
+                "MATCH (k:ConfigKey {id: $cfg}), (callee:Service {id: $callee_id}) "
                 "MERGE (k)-[:TARGETS]->(callee)",
                 p,
                 graph,
@@ -229,7 +258,13 @@ def ingest_deploy(deploy: DeployIn, graph: str | None = None) -> str:
 
 
 def ingest_telemetry(telemetry: TelemetryIn, graph: str | None = None) -> int:
-    """Keep CALLS.p99_ms / error_rate current from callee-side measurements."""
+    """Keep CALLS.p99_ms / error_rate current from callee-side measurements.
+
+    Edges naming a service the graph doesn't know are skipped (and logged). Returns edges written."""
+    named = {n for e in telemetry.edges for n in (e.caller, e.callee)}
+    known = known_services(named, graph)
+    if unknown := sorted(named - known):
+        log.warning("telemetry names unknown services %s; those edges skipped", unknown)
     edges = [
         {
             "a": svc(e.caller),
@@ -240,12 +275,11 @@ def ingest_telemetry(telemetry: TelemetryIn, graph: str | None = None) -> int:
             "err": e.error_rate,
         }
         for e in telemetry.edges
+        if e.caller in known and e.callee in known
     ]
     if edges:
         _w(
-            "UNWIND $edges AS e "
-            "MERGE (a:Service {id: e.a}) ON CREATE SET a.name = e.caller "
-            "MERGE (b:Service {id: e.b}) ON CREATE SET b.name = e.callee "
+            "UNWIND $edges AS e MATCH (a:Service {id: e.a}), (b:Service {id: e.b}) "
             "MERGE (a)-[c:CALLS]->(b) SET c.p99_ms = e.p99, c.error_rate = e.err, c.updated_at = $ts",
             {"edges": edges, "ts": telemetry.ts},
             graph,
