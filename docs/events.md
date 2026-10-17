@@ -94,6 +94,13 @@ them appears in the result of re-running `query_id` with `params`. This is the g
   - It returns `{rows, subgraph, ms}`.
   - It runs read-only and allow-listed (catalog queries only), with a 2 s timeout.
 
+## 3b. Company Brain
+
+`POST /api/brain/ask` with `{question, graph?, graph_only?}` returns
+`{ask_id, question, answer, sources: [node ids], evidence: Subgraph, findings: [Finding], steps: [step payloads],
+graph_only}`. Every source is a node from a grounded finding; an LLM answer with no grounded finding is
+replaced by the graph-only answer.
+
 ## 4. MCP tools (served at `/mcp/` for our SDE agents; same registry our own agents use)
 
 Streamable HTTP, header `Authorization: Bearer $WHYGRAPH_API_TOKEN`; setup in `scenarios/sde-agent-kit.md`.

@@ -103,7 +103,8 @@ def test_cause_llm_path_is_scoped_and_grounded(catalog):
     task = llm.requests[0]["messages"][0]["content"]
     assert "Root service: checkout" in task and str(ALERT_TS) in task
     tools = {t["name"] for t in llm.requests[0]["tools"]}
-    assert tools == {"suspect_changes", "config_vs_reality", "record_finding"}  # unmerged tools left out
+    assert tools == {"suspect_changes", "config_vs_reality", "doc_search", "record_finding"}
+    assert "commit_details" not in tools  # tools missing from the catalog are left out
     assert [f.claim for f in findings] == ["coder-bot's 9f2c1ab is the top suspect"]
     assert findings[0].confidence == 0.88
 
