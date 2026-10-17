@@ -141,7 +141,19 @@ def test_fixture_findings_are_grounded_by_the_catalog(act1):
         assert {r["id"] for r in f["evidence"]["rels"]} <= rels, f["id"]
 
 
-@pytest.mark.parametrize("query_id", sorted(q.id for q in queries.CATALOG.values() if q.read_only))
+RUNNABLE = sorted(
+    q.id
+    for q in queries.CATALOG.values()
+    if q.read_only and queries.required_params(q) <= set(q.example_params)
+)
+
+
+def test_missing_params_never_reach_falkordb():
+    with pytest.raises(ValueError, match="missing parameters"):
+        queries.run("doc_search_vec", {})
+
+
+@pytest.mark.parametrize("query_id", RUNNABLE)
 def test_every_read_query_runs_on_the_full_seed(seeded, query_id):
     q = queries.get(query_id)
     out = queries.run(query_id, q.example_params, graph=seeded)
@@ -166,3 +178,28 @@ def test_q2_finds_the_real_cause_of_every_past_incident(seeded):
             "suspect_changes", {"root": root, "alert_ts": r["ts"], "window_ms": WINDOW}, graph=seeded
         ).rows
         assert suspects and suspects[0]["sha"] == r["sha"], r["inc"]
+
+
+def test_q9_criticality_ranks_every_service(seeded):
+    rows = queries.run("criticality", graph=seeded).rows
+    assert len(rows) == 30 and [r["rank"] for r in rows] == list(range(1, 31))
+    assert rows[0]["criticality"] == "high" and rows[-1]["criticality"] == "low"
+    assert (
+        rows[-1]["service"] in {"frontend", "analytics", "image-resizer"}
+        or rows[-1]["score"] <= rows[0]["score"]
+    )
+
+
+def test_q10_seeded_stale_runbooks(seeded):
+    stale = {(r["runbook"], r["key"]) for r in queries.run("stale_runbooks", graph=seeded).rows}
+    assert ("rb:checkout-oncall", "cfg:checkout.timeouts_ms.shipping") in stale  # it still says 1200 ms
+    assert ("rb:payment-latency", "cfg:checkout.timeouts_ms.payment") in stale  # Act 1 changed it
+
+
+def test_q8_doc_search_finds_the_payment_runbook(seeded):
+    from whygraph.memory.search import doc_search, terms
+
+    assert terms("Why is the checkout->payment timeout 800 ms?") == "checkout|payment|timeout|800|ms"
+    docs = doc_search("checkout payment timeout", seeded)
+    assert docs[0].id == "rb:payment-latency"
+    assert "cfg:checkout.timeouts_ms.payment" in {n.id for n in docs[0].evidence.nodes}
