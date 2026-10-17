@@ -175,6 +175,7 @@ carries a human `name` for display, falling back to the id.
 (Engineer)-[:MEMBER_OF]->(Team)
 
 (PR)-[:CONTAINS]->(Commit)-[:AUTHORED_BY]->(Engineer)
+(PR)-[:OPENED_BY]->(Engineer)                written by PR Guard when it checks an open PR
 (Commit)-[:TOUCHES]->(File)-[:BELONGS_TO]->(Service)
 (Commit)-[:CHANGES {old, new, ts, callee_p99_at_change}]->(ConfigKey)
 (ConfigKey)-[:CONFIGURES]->(Service)       the caller that reads the key
