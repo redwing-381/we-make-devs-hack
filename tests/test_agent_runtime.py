@@ -9,8 +9,8 @@ class ProbeAgent(BaseAgent):
     tools = ("service_neighbors",)
     system = "Find what checkout depends on."
 
-    def task(self, ctx, prior):
-        return f"Investigate {ctx.incident_id}"
+    def task(self, run, prior):
+        return f"Investigate {run.ctx.incident_id}"
 
     async def deterministic(self, run, prior):
         out = await run.query("service_neighbors", {"svc": "checkout"})

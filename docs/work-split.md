@@ -201,14 +201,16 @@ plain-English `explain`, and you should run `make docs` afterwards. Start from t
 
 | id | code | Params | Must return |
 |---|---|---|---|
-| `root_alert` | Q0 | `inc` | The deepest alerting service plus the alert, as a path for the UI |
-| `blast_radius` | Q1 | `svc` | Callers with hops + path; async consumers via Topic marked delayed |
-| `suspect_changes` | Q2 | `root, alert_ts, window_ms` | Commit, author, kind, hops, score, path |
-| `config_vs_reality` | Q3 | `sha` | caller, callee, key, old, new, `callee_p99_at_change`, `below_p99`, **path** |
+| `root_alert` | Q0 | `inc` | `service` (name), `alert` (id), `path` (Alert-FIRED_ON->Service). Only the root row(s) |
+| `blast_radius` | Q1 | `svc` | One row per hurt service: `service`, `tier`, `hops`, `delayed` (true for async consumers via Topic), `path` |
+| `suspect_changes` | Q2 | `root, alert_ts, window_ms` | Ranked rows, best first: `sha` (as stored on Commit), `message`, `author`, `author_kind`, `service`, `hops`, `mins_before`, `score` (0–1), `path` (Service…Deploy-SHIPS->Commit-AUTHORED_BY->Engineer) |
+| `config_vs_reality` | Q3 | `sha` | `caller`, `callee`, `key`, `old`, `new`, `callee_p99_at_change`, `below_p99`, `path` (Commit-CHANGES->ConfigKey-CONFIGURES->caller-CALLS->callee) |
 | `similar_incidents` | Q4 | `id, q` | Feature-Jaccard rows + vector rows (merged in Python, see F-A3) |
 | `who_knows` | Q5 | `svc` | Ranked engineers with team, on_call, commits and resolved counts |
 | `guard_timeout_below_p99` | Q6 | `changes` | caller, callee, proposed, p99, `safe_min` |
 
+- **Column names above are what Solai's Triage and Cause agents read** (`whygraph/agents/triage.py`,
+  `cause.py`; the expected rows are mocked in `tests/act1_graph.py`). Keep them, or change both sides in one PR.
 - **Return paths, not just columns.** The UI and the grounding check need node and edge ids; `client.run()`
   turns paths into a `Subgraph` automatically.
 - **Tests** (`tests/test_queries.py`, `db`-marked) run on the minimal slice in a throwaway graph:
