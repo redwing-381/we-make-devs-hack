@@ -91,7 +91,11 @@ them appears in the result of re-running `query_id` with `params`. This is the g
   - It returns `{rows, subgraph, ms}`.
   - It runs read-only and allow-listed (catalog queries only), with a 2 s timeout.
 
-## 4. MCP tools (served at `/mcp` for our SDE agents; same registry our own agents use)
+## 4. MCP tools (served at `/mcp/` for our SDE agents; same registry our own agents use)
+
+Streamable HTTP, header `Authorization: Bearer $WHYGRAPH_API_TOKEN`; setup in `scenarios/sde-agent-kit.md`.
+The same check is available as `POST /api/guard/check?graph=<tenant>` (body `ChangeRiskRequest`), for the
+UI's PR Guard tab and the tenant A/B demo.
 
 ### `check_change_risk`, input `ChangeRiskRequest`
 ```json
