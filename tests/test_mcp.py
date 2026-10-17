@@ -25,7 +25,11 @@ def test_lists_the_four_tools():
     assert asyncio.run(go()) == {"check_change_risk", "who_knows", "why_is", "get_service_context"}
 
 
-def test_check_change_risk_round_trips_the_contract():
+def test_check_change_risk_round_trips_the_contract(monkeypatch):
+    from whygraph.integrations import guard
+
+    stub = guard.Memory(check_changes=lambda c, g: [], record_guard_outcome=lambda *a: None)
+    monkeypatch.setattr(guard, "default_memory", lambda: stub)  # no database needed
     res = call(
         "check_change_risk", {"changes": [{"service": "shipping", "key": "timeouts_ms.quote", "new": 100}]}
     )
@@ -40,9 +44,9 @@ def test_read_tools_report_missing_catalog_queries(monkeypatch):
 
 def test_service_context_uses_catalog_queries(monkeypatch):
     monkeypatch.setattr(
-        mcp_server.client,
+        mcp_server.queries,
         "run",
-        lambda cypher, params, graph=None, read_only=True: fake_run_query("service_neighbors", params, graph),
+        lambda query_id, params, graph=None: fake_run_query("service_neighbors", params, graph),
     )
     data = call("get_service_context", {"service": "checkout"}).structured_content
     assert data["neighbors"]["available"] and "svc:payment" in data["neighbors"]["node_ids"]

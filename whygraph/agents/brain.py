@@ -4,13 +4,13 @@
 picks among the catalog queries and must record a grounded finding for each fact it uses; the answer's
 sources are those findings' node ids. Graph-only, a small router maps the question to one query.
 
-Catalog queries read (columns per docs/work-split.md §4):
-  who_knows(svc)        -> engineer, handle, kind, on_call, team, commits, resolved, path
-  why_is(cfg)           -> config, value, changed_by, commit, pr, decision, lesson, lesson_text, incident,
-                           path
-  doc_search(text)      -> doc, title, kind, snippet, score
-  stale_runbooks()      -> runbook, title, config, changed_at, updated_at, path
-  service_neighbors(svc)-> s, calls, called_by   (in the base catalog)
+Catalog queries read (columns as returned by whygraph/graph/queries.py):
+  who_knows(svc)         -> handle, kind, on_call, team, owner, commits, config_changes, resolved, path
+  why_is(key)            -> key, value, sha, pr, author, lessons, incidents, changed, author_path, why, origin
+                            (newest change first; Decision and Lesson nodes ride on the `why` paths)
+  doc_search(terms)      -> id, kind, title, text, score, node, mentions
+  stale_runbooks()       -> runbook, title, updated_at, key, value, changed_to, changed_at, path
+  service_neighbors(svc) -> s, calls, called_by
 """
 
 import asyncio
@@ -22,7 +22,6 @@ from whygraph.agents.base import AgentContext, AgentRun, BaseAgent, path_ids, ru
 from whygraph.agents.blackboard import MemoryBoard
 from whygraph.agents.events import EventBus, now_ms
 from whygraph.graph import client, queries
-from whygraph.graph.ids import cfg
 from whygraph.models.events import Finding, Subgraph
 
 EDGE = re.compile(r"([a-z][\w-]*)\s*(?:→|->|to)\s*([a-z][\w-]*)", re.IGNORECASE)
@@ -35,6 +34,16 @@ def list_services(graph: str | None) -> list[str]:
     return [r["name"] for r in out.rows if r.get("name")]
 
 
+def search_terms(question: str) -> str:
+    """FalkorDB full-text terms for a plain question (words joined by |), via the memory core's helper."""
+    try:
+        from whygraph.memory.search import terms
+    except ImportError:
+        words = [w for w in WORD.findall(question.lower()) if len(w) > 3]
+        return "|".join(dict.fromkeys(words)) or question
+    return terms(question) or question
+
+
 def route(question: str, services: list[str]) -> tuple[str, dict[str, Any]]:
     """Graph-only: pick one catalog query for the question."""
     q = question.lower()
@@ -45,15 +54,15 @@ def route(question: str, services: list[str]) -> tuple[str, dict[str, Any]]:
     if q.startswith("why") or " why " in f" {q} ":
         edge = next((m for m in EDGE.finditer(q) if m.group(1) in known and m.group(2) in known), None)
         if edge:
-            return "why_is", {"cfg": cfg(edge.group(1), f"timeouts_ms.{edge.group(2)}")}
+            return "why_is", {"key": f"{edge.group(1)}.timeouts_ms.{edge.group(2)}"}
         key = re.search(r"([a-z][\w-]*)\s+((?:timeouts_ms|retries|pool_size|flags)\.[\w.-]+)", q)
         if key and key.group(1) in known:
-            return "why_is", {"cfg": cfg(key.group(1), key.group(2))}
+            return "why_is", {"key": f"{key.group(1)}.{key.group(2)}"}
     if mentioned and any(w in q for w in ("who", "owner", "owns", "on call", "on-call", "page", "expert")):
         return "who_knows", {"svc": mentioned[0]}
     if mentioned and any(w in q for w in ("depend", "call", "talk", "upstream", "downstream")):
         return "service_neighbors", {"svc": mentioned[0]}
-    return "doc_search", {"text": question}
+    return "doc_search", {"terms": search_terms(question)}
 
 
 class BrainAgent(BaseAgent):
@@ -85,11 +94,12 @@ incidents involved. If the graph has no answer, say so."""
         if not out.rows:
             run.scope["answer"] = "The graph has nothing on that."
             return
-        claim, node_ids, rels = self._answer(query_id, params, out.rows)
+        claim, node_ids, rels = self._answer(query_id, params, out)
         f = await run.finding(claim, query_id, params, node_ids, rels, out=out)
         run.scope["answer"] = f.claim
 
-    def _answer(self, query_id: str, params: dict, rows: list[dict]) -> tuple[str, list[str], list[str]]:
+    def _answer(self, query_id: str, params: dict, out) -> tuple[str, list[str], list[str]]:
+        rows = out.rows
         top = rows[0]
         if query_id == "who_knows":
             people = []
@@ -102,23 +112,29 @@ incidents involved. If the graph has no answer, say so."""
             nodes, rels = path_ids(*rows[:3])
             return f"For {params['svc']}, ask " + "; then ".join(people) + ".", nodes, rels
         if query_id == "why_is":
-            key = top.get("config", params["cfg"]).split(":", 1)[-1]
-            claim = f"{key} is {top.get('value')}"
-            if top.get("decision"):
-                claim += f' because of the decision "{top["decision"]}"'
-            if top.get("lesson"):
-                claim += f", from lesson {top['lesson'].split(':', 1)[-1]}"
-                if top.get("incident"):
-                    claim += f" learned in {top['incident'].split(':', 1)[-1]}"
-            if top.get("lesson_text"):
-                claim += f" ({top['lesson_text']})"
-            if top.get("pr") or top.get("changed_by"):
-                claim += f". Set in PR {top.get('pr', '?')} by {top.get('changed_by', '?')}"
             nodes, rels = path_ids(top)
-            return claim + ".", nodes, rels
+            on_path = {n.id: n for n in out.subgraph.nodes if n.id in nodes}
+            decision = next((n for n in on_path.values() if n.label == "Decision"), None)
+            lesson = next((n for n in on_path.values() if n.label == "Lesson"), None)
+            key = (top.get("key") or params["key"]).removeprefix("cfg:")
+            claim = f"{key} is {top.get('value')}"
+            if decision:
+                title = decision.props.get("title") or decision.name
+                claim += f' because of the decision "{title}"'
+            lessons, incidents = top.get("lessons") or [], top.get("incidents") or []
+            if lessons:
+                claim += f", from lesson {lessons[0].split(':', 1)[-1]}"
+                if incidents:
+                    claim += f" learned in {incidents[0].split(':', 1)[-1]}"
+            if lesson and lesson.props.get("text"):
+                claim += f" ({lesson.props['text']})"
+            if top.get("pr") or top.get("author"):
+                sha = f" ({str(top['sha'])[:7]})" if top.get("sha") else ""
+                claim += f". Set in PR #{top.get('pr', '?')}{sha} by {top.get('author', '?')}"
+            return claim + ".", nodes or ([top["key"]] if top.get("key") else []), rels
         if query_id == "stale_runbooks":
             items = [
-                f"{r.get('title')} (mentions {r.get('config', '?').split(':', 1)[-1]})" for r in rows[:5]
+                f"{r.get('title')} (mentions {(r.get('key') or '?').split(':', 1)[-1]})" for r in rows[:5]
             ]
             nodes, rels = path_ids(*rows[:5])
             return (
@@ -137,8 +153,10 @@ incidents involved. If the graph has no answer, say so."""
             calls_text, callers_text = ", ".join(calls) or "nothing", ", ".join(callers) or "nobody"
             claim = f"{params['svc']} calls {calls_text}; called by {callers_text}."
             return claim, nodes or [f"svc:{params['svc']}"], rels
-        docs = [f"{r.get('title')}: {r.get('snippet')}" for r in rows[:3]]
-        return "Closest documents: " + " | ".join(docs), [r["doc"] for r in rows[:3] if r.get("doc")], []
+        docs = [f"{r.get('title')}: {(r.get('text') or '')[:140]}" for r in rows[:3]]
+        mention_nodes, mention_rels = path_ids(*rows[:3])
+        nodes = [r["id"] for r in rows[:3] if r.get("id")] + mention_nodes
+        return "Closest documents: " + " | ".join(docs), list(dict.fromkeys(nodes)), mention_rels
 
     def summary(self, run: AgentRun) -> str:
         return f"{len(run.findings)} sourced facts"

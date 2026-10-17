@@ -2,7 +2,7 @@
 
 Reads catalog queries (columns per docs/work-split.md §4 F-A2):
   root_alert(inc)    -> service, alert, path   (deepest alerting service: nothing it depends on is alerting)
-  blast_radius(svc)  -> service, tier, hops, delayed, path   (callers, transitively; async consumers delayed)
+  blast_radius(svc)  -> service, tier, hops, impact ('sync' | 'delayed'), path
 """
 
 import asyncio
@@ -17,6 +17,11 @@ def names(items: list[str]) -> str:
     if len(items) <= 2:
         return " and ".join(items)
     return ", ".join(items[:-1]) + f" and {items[-1]}"
+
+
+def is_delayed(row: dict) -> bool:
+    """Async consumers (via a Topic) are hurt later, not with 5xx."""
+    return row.get("impact") == "delayed" or bool(row.get("delayed"))
 
 
 class TriageAgent(BaseAgent):
@@ -57,8 +62,8 @@ class TriageAgent(BaseAgent):
         br = await run.query("blast_radius", {"svc": root})
         handoff = [root_finding.id]
         if br.rows:
-            sync = [r for r in br.rows if not r.get("delayed")]
-            delayed = [r["service"] for r in br.rows if r.get("delayed")]
+            sync = [r for r in br.rows if not is_delayed(r)]
+            delayed = [r["service"] for r in br.rows if is_delayed(r)]
             edge = [r["service"] for r in sync if r.get("tier") == "edge"]
             parts = [f"Blast radius of {root}: {len(sync)} upstream service{'s' if len(sync) != 1 else ''}"]
             if sync:

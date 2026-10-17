@@ -82,14 +82,12 @@ def _schema(value: Any) -> dict:
 
 def catalog_tool(query_id: str) -> dict:
     q = queries.get(query_id)
+    required = sorted(queries.required_params(q))
+    properties = {k: _schema(q.example_params.get(k, "")) for k in required}
     return {
         "name": q.id,
-        "description": f"{q.title}. {q.explain}",
-        "input_schema": {
-            "type": "object",
-            "properties": {k: _schema(v) for k, v in q.example_params.items()},
-            "required": list(q.example_params),
-        },
+        "description": f"{q.title}. {q.explain} Example params: {json.dumps(q.example_params)}",
+        "input_schema": {"type": "object", "properties": properties, "required": required},
     }
 
 

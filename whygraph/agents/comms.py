@@ -7,7 +7,8 @@ an LLM is configured, Haiku may tighten the wording but is told not to add facts
 to the template.
 
 Catalog query read (columns per docs/work-split.md §4):
-  who_knows(svc) -> engineer, handle, kind, on_call, team, commits, resolved, path
+  who_knows(svc) -> handle, name, kind, on_call, team, owner, commits, config_changes, resolved, path,
+                    changed   (path = the ownership chain; empty for people who don't own the service)
 """
 
 import asyncio
@@ -80,13 +81,17 @@ class CommsAgent(BaseAgent):
             parts.append(memory.claim)
         pages: list[str] = []
         if on_call:
-            who = on_call.get("handle") or on_call.get("engineer", "?").split(":", 1)[-1]
+            on_call = {**on_call, "engineer": on_call.get("engineer") or f"eng:{on_call.get('handle')}"}
+            who = on_call.get("handle") or on_call["engineer"].split(":", 1)[-1]
             role = f"{on_call['team']} on-call" if on_call.get("on_call") and on_call.get("team") else "owner"
             paging = f"Paging {who} ({role})"
             if on_call.get("engineer"):
                 pages.append(on_call["engineer"])
             if author and author.id not in pages:
-                paging += f" and {author.name or author.id.split(':', 1)[1]} (author of the change)"
+                handle = (
+                    author.props.get("handle") or author.id.split(":", 1)[1]
+                )  # display names may carry a suffix
+                paging += f" and {handle} (author of the change)"
                 pages.append(author.id)
             parts.append(paging + ".")
         text = " ".join(parts)
@@ -96,13 +101,15 @@ class CommsAgent(BaseAgent):
         await asyncio.to_thread(
             ctx.board.write_message, ctx.incident_id, msg_id, CHANNEL, text, "why-graph", pages
         )
-        if out.rows and on_call:
-            nodes, rels = path_ids(on_call)
+        # cite the on-call engineer's ownership chain, else any owner's: only graph paths can back a finding
+        backing = next((r for r in [on_call, *out.rows] if r and path_ids(r)[0]), None)
+        if backing:
+            nodes, rels = path_ids(backing)
             await run.finding(
                 text,
                 "who_knows",
                 {"svc": root},
-                nodes or [on_call["engineer"]],
+                nodes,
                 rels,
                 builds_on=[f.id for f in (cause, memory) if f],
                 confidence=0.85,

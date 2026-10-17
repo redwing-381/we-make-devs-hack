@@ -5,7 +5,7 @@ import pytest
 
 from tests.act1_graph import Recorder, register_stubs
 from tests.fakes import ScriptedLLM, reply, tool_use
-from whygraph.agents.brain import ask, route
+from whygraph.agents.brain import ask, route, search_terms
 from whygraph.graph import queries
 
 SERVICES = ["checkout", "frontend", "payment", "product-catalog", "quote", "recommendation", "shipping"]
@@ -28,16 +28,21 @@ def catalog():
     [
         ("Who knows checkout?", ("who_knows", {"svc": "checkout"})),
         ("who should I page for payment", ("who_knows", {"svc": "payment"})),
-        ("Why is shipping→quote 450 ms?", ("why_is", {"cfg": "cfg:shipping.timeouts_ms.quote"})),
-        ("why is shipping -> quote so high", ("why_is", {"cfg": "cfg:shipping.timeouts_ms.quote"})),
-        ("Why is checkout timeouts_ms.payment 800?", ("why_is", {"cfg": "cfg:checkout.timeouts_ms.payment"})),
+        ("Why is shipping→quote 450 ms?", ("why_is", {"key": "shipping.timeouts_ms.quote"})),
+        ("why is shipping -> quote so high", ("why_is", {"key": "shipping.timeouts_ms.quote"})),
+        ("Why is checkout timeouts_ms.payment 800?", ("why_is", {"key": "checkout.timeouts_ms.payment"})),
         ("Which runbooks are out of date?", ("stale_runbooks", {})),
         ("What does recommendation depend on?", ("service_neighbors", {"svc": "recommendation"})),
-        ("how do we handle kafka lag", ("doc_search", {"text": "how do we handle kafka lag"})),
     ],
 )
 def test_router(question, expected):
     assert route(question, SERVICES) == expected
+
+
+def test_router_falls_back_to_full_text_terms():
+    query_id, params = route("how do we handle kafka lag", SERVICES)
+    assert query_id == "doc_search" and params == {"terms": search_terms("how do we handle kafka lag")}
+    assert "kafka" in params["terms"]
 
 
 def answer(question, **kw):
@@ -54,14 +59,14 @@ def test_who_knows_names_people_with_their_history(catalog):
 def test_why_is_traces_the_decision_back_to_the_incident(catalog):
     res = answer("Why is shipping→quote 450 ms?")
     assert res["answer"].startswith('shipping.timeouts_ms.quote is 450 because of the decision "Keep caller')
-    assert (
-        "from lesson L-1 learned in INC-1031" in res["answer"]
-        and "Set in PR pr:15 by coder-bot" in res["answer"]
-    )
+    assert "from lesson L-1 learned in INC-1031 (a timeout below the callee p99" in res["answer"]
+    assert res["answer"].endswith("Set in PR #15 (5e1d2aa) by coder-bot.")
     assert {"cfg:shipping.timeouts_ms.quote", "dec:caller-timeouts", "lesson:L-1", "inc:INC-1031"} <= set(
         res["sources"]
     )
-    assert len(res["evidence"]["rels"]) == 5
+    assert (
+        len(res["evidence"]["rels"]) == 6
+    )  # change, PR, author, and the decision -> lesson -> incident chain
 
 
 def test_stale_runbooks_and_docs(catalog):
@@ -69,9 +74,11 @@ def test_stale_runbooks_and_docs(catalog):
         "1 runbook(s) are older than the config they describe: Payment latency (mentions checkout.timeouts_ms"
     )
     docs = answer("how do we handle payment latency")
-    assert docs["answer"].startswith("Closest documents: Payment latency") and docs["sources"] == [
-        "rb:payment-latency"
-    ]
+    assert docs["answer"].startswith("Closest documents: Payment latency: Check payment p99")
+    assert docs["sources"] == [
+        "rb:payment-latency",
+        "cfg:checkout.timeouts_ms.payment",
+    ]  # doc + what it mentions
 
 
 def test_missing_query_is_explained(monkeypatch):
