@@ -132,7 +132,7 @@ class RiskWarning(BaseModel):
     incident_id: str | None = None
     service: str
     key: str
-    proposed: float | str
+    proposed: int | float | str
     safe_min: float | None = None
     evidence: Subgraph = Field(default_factory=Subgraph)
 
