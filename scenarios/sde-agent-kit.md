@@ -1,5 +1,7 @@
 # SDE agent kit: connect our agent team to Why-Graph
 
+The Band team for the demo (roles, prompts, act-by-act script) is in `scenarios/band-team.md`.
+
 Our SDE agents reach Why-Graph's memory over **MCP**. The tools are defined in `whygraph/integrations/mcp_server.py`.
 
 ## Endpoint
@@ -36,6 +38,7 @@ claude mcp add --transport http why-graph http://localhost:8000/mcp/ --header "A
 | `who_knows(service)` | Owner team, on-call engineer, and the people with commits or resolved incidents on that service |
 | `why_is(service, key)` | The change → PR → decision → lesson → incident behind a config value |
 | `get_service_context(service)` | Dependencies with current p99 latencies, plus owners |
+| `incident_report(incident_id?)` | What broke and why: the latest open incident (or the one named), its root-cause finding, guilty commit, blast radius, Memory's recall, the status update, and every finding with node ids |
 
 `changes` holds `services.yaml` edits:
 
