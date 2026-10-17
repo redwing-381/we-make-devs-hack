@@ -226,26 +226,38 @@ These are the Python functions Solai calls. Keep these signatures:
 def extract_features(incident_id: str, graph: str | None = None) -> list[str]:
     """Deterministic Cypher; MERGE (Incident)-[:HAS_FEATURE]->(Feature); returns feature names."""
 
+
 # whygraph/memory/similarity.py
 @dataclass
 class Match:
-    incident_id: str; score: float; jaccard: float; vector_sim: float
-    shared: list[str]; lesson_id: str | None; fix: str | None; evidence: Subgraph
+    incident_id: str
+    score: float
+    jaccard: float
+    vector_sim: float
+    shared: list[str]
+    lesson_id: str | None
+    fix: str | None
+    evidence: Subgraph
+
 
 def similar_incidents(incident_id: str, graph: str | None = None, k: int = 5) -> list[Match]:
     """0.7*Jaccard(HAS_FEATURE) + 0.3*(1 - vector distance). Resolved incidents only."""
 
+
 # whygraph/memory/detectors.py
 def check_changes(changes: list[ConfigChange], graph: str | None = None) -> list[RiskWarning]:
     """Run every active Detector's stored Cypher on proposed changes (used by MCP + PR Guard)."""
+
 
 # whygraph/memory/lessons.py
 def write_lesson(incident_id: str, cause_finding_id: str, fix: str, graph: str | None = None) -> dict:
     """Lesson + FailurePattern + Decision + Detector (template chosen, self-validated on this incident,
     backtested over all CHANGES). Returns the `memory.lesson_written` payload (docs/events.md)."""
 
-def record_guard_outcome(pr_number: int, lesson_id: str,
-                         outcome: Literal["warned", "applied", "ignored"], graph: str | None = None) -> None:
+
+def record_guard_outcome(
+    pr_number: int, lesson_id: str, outcome: Literal["warned", "applied", "ignored"], graph: str | None = None
+) -> None:
     """PR-[:WARNED_WITH|APPLIED|IGNORED]->Lesson; applied → confidence +0.2, prevented +1."""
 ```
 
