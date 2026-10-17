@@ -59,6 +59,13 @@ class AlertIn(BaseModel):
     source: str = "watcher"
 
 
+class ConfigChange(BaseModel):
+    service: str
+    key: str  # dotted path in services.yaml, e.g. "timeouts_ms.payment"
+    old: int | float | str | None = None
+    new: int | float | str
+
+
 class DeployIn(BaseModel):
     sha: str
     repo: str
@@ -66,6 +73,9 @@ class DeployIn(BaseModel):
     ts: int
     pr_number: int | None = None
     author: str | None = None
+    message: str | None = None
+    # services.yaml diff computed by the deployer, so Act 1 works without the GitHub ingester
+    config_changes: list[ConfigChange] = Field(default_factory=list)
 
 
 class EdgeTelemetry(BaseModel):
@@ -105,13 +115,6 @@ class AgentEvent(BaseModel):
 
 
 # --- PR guard / MCP ------------------------------------------------------------------------
-
-
-class ConfigChange(BaseModel):
-    service: str
-    key: str  # dotted path in services.yaml, e.g. "timeouts_ms.payment"
-    old: float | str | None = None
-    new: float | str
 
 
 class ChangeRiskRequest(BaseModel):

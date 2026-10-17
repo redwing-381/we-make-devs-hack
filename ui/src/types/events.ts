@@ -47,6 +47,17 @@ export interface AlertIn {
   source: string;
 }
 
+export interface DeployIn {
+  sha: string;
+  repo: string;
+  services: string[];
+  ts: number;
+  pr_number: number | null;
+  author: string | null;
+  message: string | null;
+  config_changes: ConfigChange[];
+}
+
 export interface Finding {
   id: string;
   agent: AgentName;

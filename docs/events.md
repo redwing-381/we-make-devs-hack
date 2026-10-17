@@ -11,13 +11,20 @@
 { "id": "a-901", "service": "checkout", "signal": "error_rate", "value": 0.62, "threshold": 0.10,
   "severity": "sev2", "ts": 1792305000000, "source": "watcher" }
 ```
-Alerts that arrive within 2 minutes of each other are grouped into one Incident on the server.
+Alerts that arrive within 2 minutes of each other are grouped into one Incident on the server. The response
+is `{incident_id, created, investigating}`; a new incident starts the agents after `ALERT_GRACE_S` (5 s), so
+sibling alerts land first.
 
 ### `POST /api/deploys`, body `DeployIn`
 ```json
 { "sha": "9f2c1ab", "repo": "org/astro-mini", "services": ["checkout"], "ts": 1792304820000,
-  "pr_number": 12, "author": "coder-bot" }
+  "pr_number": 12, "author": "coder-bot", "message": "Reduce checkout latency",
+  "config_changes": [ { "service": "checkout", "key": "timeouts_ms.payment", "old": 800, "new": 200 } ] }
 ```
+`config_changes` is the `services.yaml` diff between the old and new sha, computed by the deployer. Each one
+becomes `(Commit)-[:CHANGES {old, new, ts, callee_p99_at_change}]->(ConfigKey)`, with the callee's current
+`CALLS.p99_ms` captured so the evidence doesn't drift as telemetry updates. An author ending in `bot` is
+stored as `Engineer {kind: 'agent'}`.
 
 ### `POST /api/telemetry`, body `TelemetryIn`
 `p99_ms` is measured on the **callee side**, so a caller's own timeout can't clip it.
