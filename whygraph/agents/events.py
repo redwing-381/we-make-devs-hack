@@ -42,7 +42,9 @@ class EventBus:
             events = []
             if path and path.exists():
                 events = [
-                    AgentEvent.model_validate_json(x) for x in path.read_text().splitlines() if x.strip()
+                    AgentEvent.model_validate_json(x)
+                    for x in path.read_text(encoding="utf-8").splitlines()
+                    if x.strip()
                 ]
                 self._closed.add(incident_id)
             self._history[incident_id] = events
@@ -65,7 +67,7 @@ class EventBus:
         path = self._path(incident_id)
         if path:
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a") as f:
+            with path.open("a", encoding="utf-8") as f:
                 f.write(event.model_dump_json() + "\n")
         for q in self._subs[incident_id]:
             q.put_nowait(event)

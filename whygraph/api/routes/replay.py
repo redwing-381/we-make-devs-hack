@@ -30,7 +30,11 @@ def _path(name: str) -> Path:
 
 
 def load_recording(path: Path) -> list[AgentEvent]:
-    return [AgentEvent.model_validate_json(line) for line in path.read_text().splitlines() if line.strip()]
+    return [
+        AgentEvent.model_validate_json(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 @router.get("")
