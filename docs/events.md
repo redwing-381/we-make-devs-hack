@@ -128,3 +128,6 @@ UI's PR Guard tab and the tenant A/B demo.
 - `why_is(config_key)` uses the `why_is` query.
 - `get_service_context(service)` returns owners, dependencies, current p99s, recent incidents and active
   lessons.
+- `incident_report(incident_id?)` returns `{found, incident, investigation_id, investigated, root_cause,
+  guilty_commit, blast_radius, memory, status_update, findings}`. With no id, it reports the latest open
+  incident. It's what an external coordinator reads before assigning a fix.

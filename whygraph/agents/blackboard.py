@@ -182,6 +182,16 @@ class Board:
         )
         return [Finding.model_validate_json(r["finding"]) for r in out.rows]
 
+    def latest_incident(self, status: str | None = "open") -> str | None:
+        """Human id of the most recently started incident (optionally only open ones)."""
+        out = client.run(
+            "MATCH (i:Incident) WHERE $status IS NULL OR i.status = $status "
+            "RETURN i.id AS id ORDER BY i.started_at DESC LIMIT 1",
+            {"status": status},
+            graph=self.graph,
+        )
+        return out.rows[0]["id"].removeprefix("inc:") if out.rows else None
+
     def latest_investigation(self, incident_id: str) -> str | None:
         out = client.run(
             "MATCH (v:Investigation)-[:FOR]->(:Incident {id: $inc}) "
@@ -255,6 +265,9 @@ class MemoryBoard(Board):
 
     def read_findings(self, inv_id: str) -> list[Finding]:
         return list(self.findings[inv_id])
+
+    def latest_incident(self, status: str | None = "open") -> str | None:
+        return max(self._n, default=None)
 
     def latest_investigation(self, incident_id: str) -> str | None:
         n = self._n.get(incident_id)
