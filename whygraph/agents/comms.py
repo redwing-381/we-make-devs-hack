@@ -88,7 +88,10 @@ class CommsAgent(BaseAgent):
             if on_call.get("engineer"):
                 pages.append(on_call["engineer"])
             if author and author.id not in pages:
-                paging += f" and {author.name or author.id.split(':', 1)[1]} (author of the change)"
+                handle = (
+                    author.props.get("handle") or author.id.split(":", 1)[1]
+                )  # display names may carry a suffix
+                paging += f" and {handle} (author of the change)"
                 pages.append(author.id)
             parts.append(paging + ".")
         text = " ".join(parts)

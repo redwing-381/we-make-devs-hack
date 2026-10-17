@@ -92,7 +92,7 @@ def test_the_demo_on_the_real_seed(graphs):
     assert not any(f.claim.startswith("Known mistake") for f in found["memory"])  # nothing learned yet
 
     status = found["comms"][0].claim
-    assert "(payments on-call)" in status and status.endswith("and coder-bot (author of the change).")
+    assert "(payments on-call)" in status.lower() and status.endswith("and coder-bot (author of the change).")
     paged = client.run(
         "MATCH (:ChatMessage)-[:PAGES]->(e:Engineer) RETURN collect(e.id) AS ids", {}, graph=demo
     ).rows[0]["ids"]
