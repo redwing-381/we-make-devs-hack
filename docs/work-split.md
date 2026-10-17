@@ -201,19 +201,19 @@ plain-English `explain`, and you should run `make docs` afterwards. Start from t
 
 | id | code | Params | Must return |
 |---|---|---|---|
-| `root_alert` | Q0 | `inc` | `service` (name), `alert` (id), `path` (Alert-FIRED_ON->Service). Only the root row(s) |
-| `blast_radius` | Q1 | `svc` | One row per hurt service: `service`, `tier`, `hops`, `delayed` (true for async consumers via Topic), `path` |
-| `suspect_changes` | Q2 | `root, alert_ts, window_ms` | Ranked rows, best first: `sha` (as stored on Commit), `message`, `author`, `author_kind`, `service`, `hops`, `mins_before`, `score` (0–1), `path` (Service…Deploy-SHIPS->Commit-AUTHORED_BY->Engineer) |
-| `config_vs_reality` | Q3 | `sha` | `caller`, `callee`, `key`, `old`, `new`, `callee_p99_at_change`, `below_p99`, `path` (Commit-CHANGES->ConfigKey-CONFIGURES->caller-CALLS->callee) |
-| `similar_incidents` | Q4 | `id` | The feature-Jaccard part only (vector similarity is merged in Python by `memory.similarity.similar_incidents`): one row per resolved past incident sharing features: `incident` (id), `jaccard`, `shared` (feature names), `lesson` (id or null), `fix`, `path` (Incident-HAS_FEATURE->Feature<-HAS_FEATURE-past Incident) |
-| `who_knows` | Q5 | `svc` | Ranked, on-call first: `engineer` (id), `handle`, `kind`, `on_call`, `team`, `commits`, `resolved`, `path` (Service<-OWNS-Team<-MEMBER_OF-Engineer) |
+| `root_alert` | Q0 | `inc` | `service`, `alert`, `signal`, `ts`, `healthy_callees`, `alerting_above`, `path` (Alert-FIRED_ON->Service), `callees`, `upstream` |
+| `blast_radius` | Q1 | `svc` | One row per hurt service: `service`, `tier`, `hops`, `impact` (`sync` \| `delayed` for async consumers via Topic), `path` |
+| `suspect_changes` | Q2 | `root, alert_ts, window_ms` | Ranked, best first: `sha`, `message`, `author`, `kind` (human \| agent), `service`, `via`, `deploy`, `minutes_before`, `hops`, `prior`, `config_change`, `score`, `path`, `author_path`, `config`, `pr` |
+| `config_vs_reality` | Q3 | `sha` | `caller`, `callee`, `key`, `kind`, `old`, `new`, `callee_p99_at_change`, `callee_p99_now`, `below_p99`, `path` (Commit-CHANGES->ConfigKey-CONFIGURES->caller-CALLS->callee), `target`, `pr`, `author`, `deploy`, `alerts` |
+| `similar_incidents` | Q4 | `id` | Feature-Jaccard part only (vector is merged in Python by `memory.similarity.similar_incidents`): `incident` (id), `title`, `shared`, `jaccard`, `fix`, `lesson_id`, `evidence` (paths Incident-HAS_FEATURE->Feature<-HAS_FEATURE-past), `lesson` (paths) |
+| `who_knows` | Q5 | `svc` | Owners first, then on-call: `handle`, `name`, `kind`, `on_call`, `team`, `owner`, `commits`, `config_changes`, `resolved`, `path` (ownership chain; empty for non-owners), `changed`. Engineer ids are `eng:<handle>` |
 | `guard_timeout_below_p99` | Q6 | `changes` | caller, callee, proposed, p99, `safe_min` |
 
-- **Column names above are what Solai's agents read** (`whygraph/agents/triage.py`, `cause.py`,
-  `memory.py`, `comms.py`; the expected rows are mocked in `tests/act1_graph.py`). Keep them, or change both
-  sides in one PR.
-- `extract_features` is called by the Memory agent in **both** passes (and by the orchestrator), so it must be
-  idempotent (MERGE). Memory only cites matches that `similar_incidents` (the catalog query) also returns.
+- **`whygraph/graph/queries.py` is the source of truth for these columns.** Solai's agents read them as
+  listed above; `tests/act1_graph.py` mirrors them (and rejects wrong `$params`), and
+  `tests/test_e2e_act1.py` runs all four agents on the real seed in CI, so a rename fails a test.
+- `extract_features` is called by the Memory agent in **both** passes (and by the orchestrator), so it must
+  stay idempotent. Memory only cites matches that `similar_incidents` (the catalog query) also returns.
 - **Return paths, not just columns.** The UI and the grounding check need node and edge ids; `client.run()`
   turns paths into a `Subgraph` automatically.
 - **Tests** (`tests/test_queries.py`, `db`-marked) run on the minimal slice in a throwaway graph:
@@ -296,17 +296,17 @@ def record_guard_outcome(
 - `reset_to.py act1`: delete `whygraph_demo`, then copy `snap_act1` back. We rehearse in a loop with this.
 
 ### F-A5 `feat/brain-queries`: Q7–Q10 (afternoon)
-- `why_is(cfg)`: walks ConfigKey ← CHANGES ← Commit ← PR → IMPLEMENTS Decision ← FROM Lesson → LEARNED_FROM
+- `why_is(key)`: walks ConfigKey ← CHANGES ← Commit ← PR → IMPLEMENTS Decision ← FROM Lesson → LEARNED_FROM
   Incident.
 - `doc_search(q, text)`: vector search plus full-text search over Runbook and ChatMessage.
 - `criticality`: `algo.pageRank('Service','CALLS')`. It feeds incident severity and the PR Guard risk tier.
 - `stale_runbooks`: runbooks that `MENTIONS` a ConfigKey whose latest `CHANGES.ts` is after the runbook's
   `updated_at`.
-- **Columns Solai's Brain agent reads** (`whygraph/agents/brain.py`, mocked in `tests/act1_graph.py`):
-  - `why_is(cfg)`: `config`, `value`, `changed_by`, `commit`, `pr`, `decision` (title), `lesson`, `lesson_text`,
-    `incident`, `path`
-  - `doc_search(text)`: `doc` (id), `title`, `kind`, `snippet`, `score`
-  - `stale_runbooks()`: `runbook`, `title`, `config`, `changed_at`, `updated_at`, `path`
+- **Columns Solai's Brain agent reads** (`whygraph/agents/brain.py`):
+  - `why_is(key)`, key like `shipping.timeouts_ms.quote`: `key`, `value`, `sha`, `pr`, `author`, `lessons`,
+    `incidents`, plus paths `changed`, `author_path`, `why` (PR → Decision → Lesson → Incident), `origin`
+  - `doc_search(terms)`, FalkorDB full-text terms: `id`, `kind`, `title`, `text`, `score`, `node`, `mentions`
+  - `stale_runbooks()`: `runbook`, `title`, `updated_at`, `key`, `value`, `changed_to`, `changed_at`, `path`
 
 **Evening:** you own the README sections for the schema diagram (Mermaid) and the query explanations, and the
 blog post (side prize).

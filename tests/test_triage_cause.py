@@ -40,7 +40,9 @@ def test_triage_finds_root_and_blast_radius(catalog):
 
     assert root.claim.startswith("Root alert is checkout")
     assert "frontend alert sits upstream" in root.claim and root.confidence == 1.0
-    assert [n.id for n in root.evidence.nodes] == ["alert:a-901", "svc:checkout"]
+    ids = [n.id for n in root.evidence.nodes]
+    assert ids[:2] == ["alert:a-901", "svc:checkout"]  # the root path first, then healthy callee and callers
+    assert {"svc:payment", "svc:frontend", "alert:a-902"} <= set(ids)
     assert "customer-facing: frontend" in blast.claim and "Delayed via async: accounting" in blast.claim
     assert blast.builds_on == [root.id]
     handoff = [e for e in c.bus.history("INC-1031") if e.type == "agent.handoff"][0]
@@ -93,7 +95,7 @@ def test_cause_llm_path_is_scoped_and_grounded(catalog):
                     "claim": "coder-bot's 9f2c1ab is the top suspect",
                     "query_id": "suspect_changes",
                     "params": {"root": "checkout", "alert_ts": ALERT_TS, "window_ms": WINDOW_MS},
-                    "node_ids": ["svc:checkout", "deploy:9f2c1ab", "commit:9f2c1ab", "eng:coder-bot"],
+                    "node_ids": ["svc:checkout", "deploy:d-311", "commit:9f2c1ab", "eng:coder-bot"],
                 },
                 "t2",
             )
