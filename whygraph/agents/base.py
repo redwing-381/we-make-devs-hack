@@ -19,7 +19,7 @@ from whygraph.agents.blackboard import Board
 from whygraph.agents.events import EventBus
 from whygraph.agents.grounding import GroundingError, evidence_from
 from whygraph.config import get_settings
-from whygraph.graph import client, queries
+from whygraph.graph import queries
 from whygraph.graph.client import QueryOutput
 from whygraph.models.events import AgentName, Finding
 
@@ -31,9 +31,13 @@ QueryRunner = Callable[[str, dict[str, Any], str | None], QueryOutput]
 
 
 def run_catalog(query_id: str, params: dict[str, Any], graph: str | None) -> QueryOutput:
-    """Run a catalog query read-only. The only way agents touch the graph for reading."""
-    q = queries.get(query_id)
-    return client.run(q.cypher, params, graph=graph, read_only=True)
+    """Run a catalog query. The only way agents touch the graph for reading.
+
+    Goes through `queries.run`, which rejects missing parameters before FalkorDB sees them (v4.22.1 can
+    crash on that error path)."""
+    if not queries.get(query_id).read_only:
+        raise ValueError(f"{query_id} writes to the graph; agents may only read")
+    return queries.run(query_id, params, graph=graph)
 
 
 @dataclass

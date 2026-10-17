@@ -11,8 +11,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 
 from whygraph.config import get_settings
-from whygraph.graph import client, queries
-from whygraph.graph.ids import cfg
+from whygraph.graph import queries
 from whygraph.integrations.guard import check_change_risk as run_guard
 from whygraph.models.events import ChangeRiskRequest, ConfigChange
 
@@ -37,7 +36,7 @@ def _catalog(query_id: str, params: dict[str, Any], graph: str | None) -> dict[s
     graph = _graph(graph)  # validate first, even if the query isn't available
     if query_id not in queries.CATALOG:
         return {"available": False, "detail": f"query {query_id!r} is not in the catalog yet"}
-    out = client.run(queries.get(query_id).cypher, params, graph=graph, read_only=True)
+    out = queries.run(query_id, params, graph=graph)
     return {
         "available": True,
         "query_id": query_id,
@@ -82,7 +81,7 @@ def build_server(auth: bool = True) -> FastMCP:
 
         `key` is the dotted services.yaml path under the service, e.g. "timeouts_ms.quote".
         """
-        return _catalog("why_is", {"cfg": cfg(service, key)}, graph)
+        return _catalog("why_is", {"key": f"{service}.{key}"}, graph)
 
     @mcp.tool(annotations={"readOnlyHint": True})
     def get_service_context(service: str, graph: str | None = None) -> dict:

@@ -46,7 +46,7 @@ def run_query(body: RunIn) -> dict:
     if not client.ping():
         raise HTTPException(503, "FalkorDB is not reachable")
     try:
-        out = client.run(q.cypher, body.params, graph=body.graph, read_only=True)
+        out = queries.run(q.id, body.params, graph=body.graph)
     except Exception as e:
         raise HTTPException(400, f"query failed: {e}") from None
     return {"query_id": q.id, "rows": out.rows, "subgraph": out.subgraph.model_dump(), "ms": out.ms}
