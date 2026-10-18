@@ -1,6 +1,7 @@
 [project]
 name = "whygraph"
 version = "0.1.0"
+license = "MIT"
 description = "Multi-agent incident investigation and memory on FalkorDB: every conclusion is a graph path."
 readme = "README.md"
 requires-python = ">=3.12"
