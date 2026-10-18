@@ -33,7 +33,19 @@ Never write task prompts that ask an agent to create a bug. The mistake has to c
 | 3 | Why-Graph running | `make db`, then `uv run python -m seed.load`, then `make api` |
 | 4 | PR Guard | `GITHUB_TOKEN` (astro-mini only: PRs read, issues read/write, contents read) and `GITHUB_REPO=redwing-381/astro-mini` in `.env` |
 | 5 | MCP for each Band agent | URL `http://localhost:8000/mcp/`; header `Authorization: Bearer <WHYGRAPH_API_TOKEN from .env>`. If Band runs in the cloud, expose the API first (`ngrok http 8000`, then use `https://<id>.ngrok.app/mcp/`) |
-| 6 | astro-mini deployer + watcher running | So a merge really deploys and real 5xx raise alerts. Without them, run `uv run python scenarios/inject.py act1` after the merge |
+| 6 | The astro-mini simulator running | `uv run python scenarios/astro_sim.py`. It watches `main`, sends a deploy with the real config diff for each merge, and raises alerts when a timeout drops below the callee's p99. Without it, run `uv run python scenarios/inject.py act1` after the merge |
+
+### Live run, step by step (one laptop, Band in the cloud)
+
+1. `make db` → `uv run python -m seed.load --reset` → `make api` → `make ui`
+2. `uv run python scenarios/astro_sim.py` (keep it running)
+3. `cloudflared tunnel --no-autoupdate --url http://localhost:5173`. It prints `https://<name>.trycloudflare.com`.
+   That one URL serves the UI, `/api` and `/mcp/`, because the Vite dev server forwards both.
+4. In Band, give every agent the MCP server `https://<name>.trycloudflare.com/mcp/` with the header
+   `Authorization: Bearer <WHYGRAPH_API_TOKEN>`. Read the token with `grep WHYGRAPH_API_TOKEN .env`.
+5. Open `https://<name>.trycloudflare.com` and watch the Incident tab while Band works.
+
+Quick tunnels get a new URL every time they start, so update Band's MCP URL after any restart.
 
 MCP tools the agents get: `check_change_risk`, `incident_report`, `why_is`, `who_knows`, `get_service_context`.
 They're described in `scenarios/sde-agent-kit.md`.
