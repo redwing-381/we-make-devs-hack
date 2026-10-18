@@ -1,7 +1,7 @@
 # Feature board
 
 Each row is **one branch and one PR**. Owners: **A** = Graph & Memory (**Shoban**), **B** = Agents &
-Integrations (**Solai**), **C** = UI, demo app & deploy (**Sakthi**). Per-person build guide with specs and
+Integrations (**Solai**), **C** = UI, demo app & deploy (**Solai**). Per-person build guide with specs and
 signatures: [work-split.md](work-split.md). The full design is in [plan.md](plan.md).
 
 **Rule for parallel work: only touch the files listed for your feature.**

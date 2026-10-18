@@ -28,7 +28,7 @@ Never write task prompts that ask an agent to create a bug. The mistake has to c
 
 | | What | Notes |
 |---|---|---|
-| 1 | `redwing-381/astro-shop` repo | The demo app (Sakthi). Its `config/services.yaml` is exactly `docs/work-split.md` §2 |
+| 1 | `redwing-381/astro-shop` repo | The demo app. Its `config/services.yaml` is exactly `docs/work-split.md` §2 |
 | 2 | A GitHub account for the Band agents, with write access to astro-shop | End its username with `bot` (e.g. `whygraph-coder-bot`) so Why-Graph records it as `Engineer {kind: 'agent'}` |
 | 3 | Why-Graph running | `make db`, then `uv run python -m seed.load`, then `make api` |
 | 4 | PR Guard | `GITHUB_TOKEN` (astro-shop only: PRs read, issues read/write, contents read) and `GITHUB_REPO=redwing-381/astro-shop` in `.env` |

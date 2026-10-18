@@ -1,4 +1,4 @@
-# Who builds what: Solai · Shoban · Sakthi
+# Who builds what: Solai · Shoban
 
 This is the build guide for each of us. Read **§0–§3** (5 minutes), then go to your own section. The full design
 is in [plan.md](plan.md), and every PR is a row in [features.md](features.md).
@@ -7,9 +7,7 @@ is in [plan.md](plan.md), and every PR is a row in [features.md](features.md).
 |---|---|---|---|---|
 | **A** | **Shoban** | @shobanravichandran | Graph & Memory: seed data, Cypher catalog, similarity, detectors, lessons | F-A1 … F-A5 |
 | **B** | **Solai** | @redwing-381 | Agents & Integrations: agent runtime, the 4 agents, ingest, MCP, PR Guard, SDE agents | F-B1 … F-B7 |
-| **C** | **Sakthi** | @ShakthiSundar-K | UI, the astro-mini demo app, live deploy, demo video | F-C1 … F-C6 |
-
-**Sakthi:** accept the GitHub invite first (github.com/redwing-381/we-make-devs-hack/invitations).
+| **C** | **Solai** | @redwing-381 | UI, the demo app (astro-shop and its simulator), live deploy, demo video | F-C1 … F-C6 |
 
 ---
 
@@ -61,7 +59,7 @@ recommendation → product-catalog
 (seed only, not in astro-mini: checkout -PUBLISHES-> topic:orders <-CONSUMES- accounting, fraud-detection)
 ```
 
-**The canonical `astro-mini/config/services.yaml`.** Sakthi creates it and Why-Graph parses diffs of it.
+**The canonical `astro-mini/config/services.yaml`.** Solai creates it and Why-Graph parses diffs of it.
 
 ```yaml
 services:
@@ -125,9 +123,7 @@ latency_ms:            # each service's own simulated work: [mean, sd] → p99 �
 | Solai (agents) | Shoban | Act 1 slice: `uv run python -m seed.load --minimal` | Sat 21:00 |
 | Solai (agents) | Shoban | Catalog queries `root_alert`, `blast_radius`, `suspect_changes`, `config_vs_reality`, `who_knows` | Sat 23:00 |
 | Solai (Memory agent) | Shoban | `similar_incidents`, `extract_features`, `check_changes`, `write_lesson` (signatures in §4) | Sun 09:30 |
-| Shoban (tests) | Sakthi | The final `services.yaml` (§2), committed in astro-mini | Sat 20:30 |
-| Sakthi (UI) | Solai | Live SSE at `/api/incidents/{id}/stream` in the same format as replay | Sun 09:00 (until then, use the fixture) |
-| Solai (ingest) | Sakthi | The watcher + deployer posting to `/api/alerts`, `/api/deploys`, `/api/telemetry` | Sat 23:30 |
+| Shoban (tests) | Solai | The final `services.yaml` (§2), committed in astro-mini | Sat 20:30 |
 | Everyone | Solai | Keys in `.env`; `astro-mini` repo created; the SDE bot account added to it | Sat 20:00 |
 
 Blocked? Use the fixture or a stub that returns hard-coded data in the agreed shape, and keep going. Never wait.
@@ -328,7 +324,7 @@ the SDE agents during recording.
 - **Keys:** Anthropic and Voyage. The Voyage key comes from MongoDB Atlas → AI Model APIs; **add a card**,
   which lifts the 3 RPM limit while the free tokens still apply. Also a GitHub fine-grained PAT. Share them
   privately.
-- **Repo:** create the `redwing-381/astro-mini` repo (public). Give Sakthi and our SDE bot account write access,
+- **Repo:** create the `redwing-381/astro-mini` repo (public). Give our SDE bot account write access,
   and set `GITHUB_REPO` in `.env`.
 - **Bot login:** send Shoban our SDE bot's GitHub login.
 
@@ -367,7 +363,7 @@ the SDE agents during recording.
   author.
   - **Contract addition (do it in this PR, tagged `[contract]`):** add `config_changes: list[ConfigChange]` and
     `message: str | None` to `DeployIn`, in both mirrors.
-  - Sakthi's deployer computes the `services.yaml` diff itself, so Act 1 works even before PR Guard exists.
+  - The deployer computes the `services.yaml` diff itself, so Act 1 works even before PR Guard exists.
   - Write `CHANGES{old, new, ts, callee_p99_at_change}`, reading the current `CALLS.p99_ms`.
 - **`POST /api/telemetry`:** `SET` `CALLS.p99_ms`, `error_rate` and `updated_at` per edge.
 - **`scenarios/inject.py act1|act2|act3`:** posts the same deploy + alert payloads with no app running. This is
@@ -423,7 +419,7 @@ mention lessons. Drive the agents during recording.
 
 ---
 
-## 6. Sakthi: UI, astro-mini & deploy (C)
+## 6. Solai: UI, demo app & deploy (C)
 
 **Your mission:** make it visible. Judges remember the moment the path lights up and the moment an agent gets
 warned before it ships. You also build the app that actually breaks.
