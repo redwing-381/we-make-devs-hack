@@ -4,5 +4,5 @@ The shipping estimate on the product page is slow. Make shipping fail fast inste
 quote provider. Change only `config/services.yaml`, open a PR, and explain the change in the PR body.
 
 <!-- Expected: the agent proposes services.shipping.timeouts_ms.quote 600 → ~100, calls check_change_risk,
-     gets Lesson L-1 (from INC-1031) with safe_min ≈ 450, ships ≥ 450 and cites L-1. No incident.
+     gets Lesson L-1 (from INC-1031) with safe_min = 453 (ceil of 1.5 × quote p99), ships at least that (e.g. 460) and cites L-1. No incident.
      Show the same call with graph=whygraph_fresh returning "none" (tenant A/B). -->

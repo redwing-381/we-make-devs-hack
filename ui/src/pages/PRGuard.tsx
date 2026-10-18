@@ -4,7 +4,7 @@ import type { ChangeRiskResponse, ConfigChange } from "../types/events";
 
 const PRESETS: { label: string; change: ConfigChange }[] = [
   { label: "Act 2 · shipping→quote 600→100", change: { service: "shipping", key: "timeouts_ms.quote", old: 600, new: 100 } },
-  { label: "Act 2 fixed · 600→450", change: { service: "shipping", key: "timeouts_ms.quote", old: 600, new: 450 } },
+  { label: "Act 2 fixed · 600→460", change: { service: "shipping", key: "timeouts_ms.quote", old: 600, new: 460 } },
   { label: "Act 3 · catalog 400→80", change: { service: "recommendation", key: "timeouts_ms.product-catalog", old: 400, new: 80 } },
 ];
 
