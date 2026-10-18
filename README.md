@@ -13,6 +13,7 @@
 ![MCP](https://img.shields.io/badge/MCP-5_tools-101312?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-167_passing-2f7a45?style=flat-square)
 ![Tracks](https://img.shields.io/badge/tracks-all_3-101312?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/license-MIT-101312?style=flat-square)](LICENSE)
 
 [![Watch the demo](https://img.youtube.com/vi/EWyd8bT-0J0/maxresdefault.jpg)](https://youtu.be/EWyd8bT-0J0)
 
@@ -216,6 +217,8 @@ We built it as one branch and PR per feature into a protected `main` with CI. Th
 [docs/plan.md](docs/plan.md) and the split in [docs/work-split.md](docs/work-split.md).
 
 ## Data and licensing
+
+Why-Graph is open source under the [MIT License](LICENSE).
 
 All company data is synthetic. The core service topology follows the
 [OpenTelemetry Demo](https://github.com/open-telemetry/opentelemetry-demo) "Astronomy Shop" (Apache-2.0).
