@@ -360,3 +360,22 @@ details pre { margin-top: 8px; max-width: 560px; }
 .callout p { margin: 0; }
 .step > div { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   word-break: break-word; font-size: 12.5px; }
+
+/* graph legend: the same shapes the canvas draws */
+.legend .lg i { width: 9px; height: 9px; margin-right: 6px; display: inline-block; vertical-align: -1px; border-radius: 0; }
+.lg-service i { background: var(--ink-2); border-radius: 50% !important; }
+.lg-signal i { background: var(--danger); transform: rotate(45deg) scale(0.85); }
+.lg-change i { background: var(--warn); }
+.lg-people i { box-shadow: inset 0 0 0 2px var(--ok); border-radius: 50% !important; }
+.lg-memory i { box-shadow: inset 0 0 0 2px var(--memory); transform: scale(0.85); }
+
+/* the evidence path as a sentence under the canvas */
+.path-strip { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.path-strip li { display: inline-flex; align-items: center; gap: 0; background: var(--sunk); border-radius: 3px;
+  overflow: hidden; animation: rise 0.3s var(--ease) both; }
+.path-strip li:nth-child(2) { animation-delay: 60ms; }
+.path-strip li:nth-child(3) { animation-delay: 120ms; }
+.path-strip li:nth-child(4) { animation-delay: 180ms; }
+.path-strip li:nth-child(n+5) { animation-delay: 240ms; }
+.path-strip .n { padding: 4px 8px; color: var(--ink); font-weight: 500; }
+.path-strip .r { padding: 4px 8px; background: var(--mark); color: var(--on-mark); font: 500 11.5px var(--mono); }
