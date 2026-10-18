@@ -68,5 +68,5 @@ curl -s -X POST localhost:8000/api/guard/check -H 'Content-Type: application/jso
 ```
 
 - **Before Act 1 is resolved:** `"risk": "none"`.
-- **After it (once F-A3 has merged):** `"risk": "high"` with lesson L-1 and `safe_min` 450.
+- **After it (once F-A3 has merged):** `"risk": "high"` with lesson L-1 and `safe_min` 453.
 - **`?graph=whygraph_fresh`:** always `"risk": "none"`.

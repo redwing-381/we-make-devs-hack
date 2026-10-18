@@ -139,8 +139,8 @@ Rehearse from a clean graph each time: `uv run python -m seed.load --reset`, the
    quote provider. Config change only."
 2. **The engineer** opens a PR lowering `services.shipping.timeouts_ms.quote` from 600 to about 100.
 3. **The reviewer** calls `check_change_risk` and gets **high risk**: lesson L-1 from Act 1's incident, safe value
-   ≈ 450 (1.5 × quote's p99). It requests changes.
-4. **The engineer** updates to 450 and cites L-1. The reviewer checks again, finds no known risk, and approves.
+   = 453 (ceil of 1.5 × quote's p99). It requests changes.
+4. **The engineer** updates to at least 453 (460 is a clean choice) and cites L-1. The reviewer checks again, finds no known risk, and approves.
    PR Guard's comment flips to "Lesson L-1 applied". The coordinator merges, and nothing breaks.
 5. **On screen:** the Memory tab, where L-1 shows `prevented: 1`. Then the A/B: the same change checked against the
    tenant that never learned returns `none`:
@@ -153,7 +153,7 @@ Rehearse from a clean graph each time: `uv run python -m seed.load --reset`, the
   `PR-[:IGNORED]->Lesson`.
 
 ### Close
-- **To the analyst:** "Why is shipping→quote 450 ms?" The answer runs the chain decision → lesson → Act 1 incident →
+- **To the analyst:** "Why is shipping→quote set to what it is?" The answer runs the chain decision → lesson → Act 1 incident →
   the original PR, with node ids.
 - In the UI, click any claim to open the Cypher drawer, then **Run live**.
 
@@ -161,7 +161,7 @@ Rehearse from a clean graph each time: `uv run python -m seed.load --reset`, the
 
 | Problem | Fallback |
 |---|---|
-| The engineer picks an odd value | Ask it for the exact value from the act (200 / 100 / 450). The story only needs the direction |
+| The engineer picks an odd value | Ask it for the exact value from the act (200 / 100 / 460). The story only needs the direction |
 | astro-shop didn't break, or there's no alert | `uv run python scenarios/inject.py act1` (or `act3`) replays the deploy and alerts |
 | The reviewer skips the check | Remind it: "Run check_change_risk on this PR before deciding." Or show the PR Guard comment, which runs the same check |
 | A Band agent can't reach MCP | Check the URL ends in `/mcp/` and the bearer token matches `.env`. For a cloud Band, the tunnel must be up |

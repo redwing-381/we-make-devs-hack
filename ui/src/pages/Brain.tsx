@@ -5,7 +5,7 @@ import type { Subgraph } from "../types/events";
 
 const EXAMPLES = [
   "Who knows payment?",
-  "Why is shipping→quote 450 ms?",
+  "Why is shipping→quote set to what it is?",
   "Why is checkout timeouts_ms.payment 200?",
   "Which runbooks are out of date?",
   "How do we handle kafka consumer lag?",
