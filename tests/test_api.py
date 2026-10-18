@@ -103,3 +103,15 @@ def test_alert_on_unknown_service_is_422(monkeypatch):
     alert = {"service": "chekout", "signal": "error_rate", "value": 0.6, "threshold": 0.1, "ts": 1}
     r = client.post("/api/alerts", json=alert)
     assert r.status_code == 422 and "chekout" in r.json()["detail"]
+
+
+def test_memory_and_guard_prs_routes():
+    mem = client.get("/api/memory")
+    assert mem.status_code in (200, 503)  # 503 without FalkorDB
+    if mem.status_code == 200:
+        body = mem.json()
+        assert set(body["types"]) == {"episodic", "semantic", "procedural"}
+        assert isinstance(body["lessons"], list) and isinstance(body["detectors"], list)
+    prs = client.get("/api/guard/prs")
+    assert prs.status_code in (200, 503)
+    assert client.get("/api/memory?graph=bad name").status_code == 400

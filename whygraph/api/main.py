@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from whygraph.api.routes import brain, guard, health, incidents, ingest, query, replay
+from whygraph.api.routes import brain, guard, health, incidents, ingest, memory, query, replay
 from whygraph.integrations import github
 from whygraph.integrations.mcp_server import mcp
 
@@ -40,6 +40,7 @@ for r in (
     query.router,
     replay.router,
     guard.router,
+    memory.router,
     brain.router,
 ):
     app.include_router(r, prefix="/api")
