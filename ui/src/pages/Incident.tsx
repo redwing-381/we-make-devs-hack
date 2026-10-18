@@ -1,56 +1,64 @@
-import { useMemo, useState } from "react";
-import { streamUrl } from "../api/client";
-import { AgentLanes } from "../components/AgentLanes";
-import { FindingCard } from "../components/FindingCard";
-import { GraphCanvas } from "../components/GraphCanvas";
-import { useEventStream } from "../lib/useEventStream";
-import type { Finding, Subgraph } from "../types/events";
+import { useEffect, useState } from "react";
+import { api, streamUrl, type IncidentSummary } from "../api/client";
+import { IncidentView } from "../components/IncidentView";
 
-/** Incident view. Until F-B1 lands, it replays the Act 1 fixture through the same SSE format. */
+const FIXTURE = "replay:act1-fixture";
+
+/** Live incidents (newest first), or the recorded Act 1 fixture when the API has none. */
 export function IncidentPage() {
-  const [run, setRun] = useState(0);
-  const { events, done } = useEventStream(`${streamUrl.replay("act1-fixture", 4)}&run=${run}`);
-  const [selected, setSelected] = useState<Finding | null>(null);
+  const [incidents, setIncidents] = useState<IncidentSummary[]>([]);
+  const [choice, setChoice] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
 
-  const findings = useMemo(
-    () => events.filter((e) => e.type === "agent.finding").map((e) => e.payload.finding as Finding),
-    [events],
-  );
-  const graph = useMemo<Subgraph>(() => {
-    const nodes = new Map<string, Subgraph["nodes"][number]>();
-    const rels = new Map<string, Subgraph["rels"][number]>();
-    findings.forEach((f) => {
-      f.evidence.nodes.forEach((n) => nodes.set(n.id, n));
-      f.evidence.rels.forEach((r) => rels.set(r.id, r));
-    });
-    return { nodes: [...nodes.values()], rels: [...rels.values()] };
-  }, [findings]);
-  const opened = events.find((e) => e.type === "incident.opened");
-  const title = (opened?.payload.incident as { title?: string } | undefined)?.title;
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      api
+        .incidents()
+        .then((list) => {
+          if (!alive) return;
+          setOffline(false);
+          // only incidents the agents have touched (not the seeded history), newest first
+          const live = list.filter((i) => i.status === "open" || Number(i.id.replace(/\D/g, "")) >= 1031);
+          setIncidents(live);
+          setChoice((c) => c ?? (live[0] ? live[0].id : FIXTURE));
+        })
+        .catch(() => {
+          if (!alive) return;
+          setOffline(true);
+          setChoice((c) => c ?? FIXTURE);
+        });
+    load();
+    const t = setInterval(load, 5000); // new incidents appear as alerts arrive
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
 
+  if (!choice) return <p className="muted">Loading…</p>;
+  const isFixture = choice === FIXTURE;
   return (
-    <div className="incident">
-      <header className="incident-head">
-        <h2>{opened ? `${opened.incident_id} · ${title}` : "Waiting for incident…"}</h2>
-        <span className="muted">{done ? "investigation complete" : `${events.length} events`}</span>
-        <button
-          onClick={() => {
-            setSelected(null);
-            setRun((n) => n + 1);
-          }}
-        >
-          Replay
-        </button>
-      </header>
-      <AgentLanes events={events} />
-      <div className="incident-body">
-        <GraphCanvas graph={graph} highlight={selected?.evidence ?? null} />
-        <aside className="findings">
-          {findings.map((f) => (
-            <FindingCard key={f.id} finding={f} selected={selected?.id === f.id} onSelect={setSelected} />
-          ))}
-        </aside>
+    <div>
+      <div className="picker">
+        <label>
+          Incident{" "}
+          <select value={choice} onChange={(e) => setChoice(e.target.value)}>
+            {incidents.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.id} · {i.title} · {i.status}
+              </option>
+            ))}
+            <option value={FIXTURE}>Recorded Act 1 (fixture)</option>
+          </select>
+        </label>
+        {offline && <span className="muted">FalkorDB/API unreachable: showing the recording</span>}
       </div>
+      <IncidentView
+        key={choice}
+        url={isFixture ? streamUrl.replay("act1-fixture", 4) : streamUrl.incident(choice)}
+        incidentId={isFixture ? undefined : choice}
+      />
     </div>
   );
 }

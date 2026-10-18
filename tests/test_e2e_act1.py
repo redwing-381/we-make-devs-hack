@@ -120,6 +120,15 @@ def test_the_demo_on_the_real_seed(graphs):
     assert res["caused_by"] == "commit:9f2c1ab" and res["root_cause_finding_id"] == cause.id
     assert res["lesson"] and res["lesson"]["lesson"]["id"].startswith("lesson:")
 
+    # the Memory tab's API on a graph that has learned something
+    from fastapi.testclient import TestClient
+
+    from whygraph.api.main import app
+
+    mem = TestClient(app).get(f"/api/memory?graph={demo}").json()
+    assert mem["lessons"][0]["source"] == "live" and mem["lessons"][0]["id"] == res["lesson"]["lesson"]["id"]
+    assert mem["types"]["procedural"]["detectors"] >= 1 and mem["types"]["episodic"]["findings"] >= 6
+
     # --- Act 2: the same mistake on another service is caught before merge ---------------------
     caught = check_change_risk(ACT2, graph=demo)
     assert caught.risk == "high" and (caught.warnings[0].incident_id or "").endswith("INC-1031")
