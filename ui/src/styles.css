@@ -232,6 +232,15 @@ input.wide { flex: 1; min-width: 260px; font-size: 16px; padding: 12px 14px; }
 .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 
 .findings { display: flex; flex-direction: column; gap: 8px; }
+/* beside the graph the findings scroll on their own, as tall as the graph panel, and stay in view
+   while the Cypher drawer opens below the canvas */
+@media (min-width: 1001px) {
+  .findings { position: sticky; top: 72px; max-height: min(564px, calc(100dvh - 92px)); overflow-y: auto;
+    overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--step) transparent; }
+  .findings::-webkit-scrollbar { width: 6px; }
+  .findings::-webkit-scrollbar-thumb { background: var(--step); border-radius: 3px; }
+  .findings > * { flex-shrink: 0; }
+}
 .findings > .muted { padding: 16px; background: var(--raised); border-radius: var(--r-md); margin: 0; }
 .finding {
   text-align: left; background: var(--raised); border-radius: var(--r-md); padding: 14px 16px; position: relative;
