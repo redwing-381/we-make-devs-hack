@@ -1,16 +1,39 @@
+<div align="center">
+
 # Why-Graph
 
-**Your AI engineers ship around the clock. Why-Graph works out why production broke, proves every claim with a
-path in a FalkorDB graph, and makes sure no agent ships the same mistake twice.**
+**Your AI engineers ship around the clock. Why-Graph works out why production broke,<br/>proves every claim with a path in a FalkorDB graph, and makes sure no agent ships the same mistake twice.**
 
-Built for [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb) (WeMakeDevs ×
-FalkorDB, 15–18 Oct 2026) by Solai ([@redwing-381](https://github.com/redwing-381)), Shoban
-([@shobanravichandran](https://github.com/shobanravichandran)) and Sakthi
-([@ShakthiSundar-K](https://github.com/ShakthiSundar-K)).
+[![Demo video](https://img.shields.io/badge/▶_Demo_video-YouTube-e6d34e?style=for-the-badge&labelColor=101312)](https://youtu.be/EWyd8bT-0J0)
+[![Live console](https://img.shields.io/badge/Live_console-why--graph.vercel.app-e6d34e?style=for-the-badge&labelColor=101312)](https://why-graph.vercel.app)
+[![Architecture](https://img.shields.io/badge/Architecture-step_through-e6d34e?style=for-the-badge&labelColor=101312)](https://why-graph.vercel.app/architecture.html)
 
-- **Demo video:** _link added at submission_
-- **Demo app the agents ship to:** [redwing-381/astro-shop](https://github.com/redwing-381/astro-shop)
-- **Attach it to your own repo:** the "Adopt it" tab in the UI (`/#docs`)
+![FalkorDB](https://img.shields.io/badge/FalkorDB-graph_%2B_vector_%2B_full--text-101312?style=flat-square)
+![Claude](https://img.shields.io/badge/Claude-Sonnet_%26_Haiku-101312?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-5_tools-101312?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-167_passing-2f7a45?style=flat-square)
+![Tracks](https://img.shields.io/badge/tracks-all_3-101312?style=flat-square)
+
+[![Watch the demo](https://img.youtube.com/vi/EWyd8bT-0J0/maxresdefault.jpg)](https://youtu.be/EWyd8bT-0J0)
+
+Built for [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb) (WeMakeDevs × FalkorDB, 15–18 Oct 2026)<br/>
+by Solai ([@redwing-381](https://github.com/redwing-381)) · Shoban ([@shobanravichandran](https://github.com/shobanravichandran)) · Sakthi ([@ShakthiSundar-K](https://github.com/ShakthiSundar-K))
+
+</div>
+
+---
+
+> **In one line:** an AI agent cut a timeout, production broke, four agents proved why on a FalkorDB graph,
+> one click turned it into a lesson and a detector, and the next agent that tried the same mistake on a
+> different service was blocked before merge.
+
+| | |
+|---|---|
+| 🎬 **Demo video** | https://youtu.be/EWyd8bT-0J0 |
+| 🖥️ **Live console** | https://why-graph.vercel.app (served from our laptop during judging) |
+| 🗺️ **Architecture** | https://why-graph.vercel.app/architecture.html (press Next to follow the data flow) |
+| 🛒 **Demo app the agents ship to** | [redwing-381/astro-shop](https://github.com/redwing-381/astro-shop) |
+| 🔌 **Attach it to your repo** | the "Adopt it" tab: https://why-graph.vercel.app/#docs |
 
 ## Tracks entered
 
