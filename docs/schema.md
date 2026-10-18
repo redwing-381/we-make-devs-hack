@@ -1,6 +1,6 @@
 # Graph data model (contract)
 
-> **Contract file.** If you change it, say so in the PR description and ping the other two owners.
+> **Contract file.** If you change it, say so in the PR description and ping the other owner.
 > Code mirrors: `whygraph/graph/ids.py` (id helpers), `whygraph/graph/schema.py` (indexes).
 
 FalkorDB uses **one graph per tenant**:

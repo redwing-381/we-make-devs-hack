@@ -2,7 +2,7 @@
 
 ## Context
 
-We have about 30 hours, 3 people and an empty repo (`we-make-devs-hack`, not yet a git repo).
+We have about 30 hours, 2 people and an empty repo (`we-make-devs-hack`, not yet a git repo).
 
 **The brief.** FalkorDB must be central: "if the product still works once FalkorDB is taken out, the graph is
 decoration." The judges want agents whose decisions you can trace. There are three tracks: act on connected
@@ -401,6 +401,8 @@ astro-mini/  app/main.py  config/services.yaml  watcher/  deployer/  Dockerfile
 
 ## 9. Team split (each person owns their area and can explain it to judges)
 
+We are a team of two: Solai owns columns B and C, Shoban owns column A.
+
 | | **A: Graph & Memory** | **B: Agents & Integrations** | **C: UI, demo app & deploy** |
 |---|---|---|---|
 | Tonight | Smoke test, generator + loader, constraints/indexes, Q0–Q5, `test_queries.py`, embedding cache | Catalog → tools, `record_finding` grounding, orchestrator + SSE + JSONL log, Triage + Cause end-to-end on `inject.py` | astro-mini + watcher + deployer, UI shell, canvas spike, render the fixture investigation |
@@ -408,7 +410,7 @@ astro-mini/  app/main.py  config/services.yaml  watcher/  deployer/  Dockerfile
 | Afternoon | Q8–Q10, tenant A/B graphs, README schema and queries | Brain agent, reliability pass (budgets, fallbacks, prompt caching) | VM deploy (compose + Caddy), replay player, Brain tab, polish |
 | Evening | README and blog post (side prize) | Drive the SDE agents for recording | Record and edit the video |
 
-**Hour-0 contracts.** All three people write these together, so everyone can explain the model:
+**Hour-0 contracts.** Both of us write these together, so everyone can explain the model:
 - `docs/schema.md`
 - `docs/events.md`, which defines:
   - the Alert, Deploy, Telemetry and PR payloads;
@@ -472,9 +474,9 @@ astro-mini/  app/main.py  config/services.yaml  watcher/  deployer/  Dockerfile
 - **"The graph is decoration."** The Graph-only toggle, every feature being a named query, and detectors as
   stored Cypher.
 - **"It looks AI-generated."**
-  - All 3 of us can explain every query.
+  - Both of us can explain every query.
   - The README is plain prose, with a "real vs simulated" table and measured query latencies.
-  - Commits come from all 3 people.
+  - Commits come from both of us.
   - AI use is disclosed in two parts: the AI coding assistants we used to build, and the fact that our
     **pre-existing** SDE agent team is an *external MCP client and actor in the demo*. All Why-Graph and
     FalkorDB work is new.

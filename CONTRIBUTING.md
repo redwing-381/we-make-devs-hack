@@ -1,12 +1,12 @@
 # Working on Why-Graph
 
-There are three of us and about 30 hours, so the workflow is built for parallel work with no merge pain.
+There are two of us and about 30 hours, so the workflow is built for parallel work with no merge pain.
 
 ## Flow
 
 1. Read your section of [docs/work-split.md](docs/work-split.md), then pick your next row in
    [docs/features.md](docs/features.md). Owners: **A** Shoban (Graph & Memory), **B** Solai (Agents &
-   Integrations), **C** Sakthi (UI, demo app & deploy).
+   Integrations), **C** Solai as well (UI, demo app & deploy).
 2. Branch from fresh `main`:
    ```bash
    git switch main && git pull && git switch -c feat/<name>

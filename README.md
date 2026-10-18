@@ -17,7 +17,7 @@
 [![Watch the demo](https://img.youtube.com/vi/EWyd8bT-0J0/maxresdefault.jpg)](https://youtu.be/EWyd8bT-0J0)
 
 Built for [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb) (WeMakeDevs × FalkorDB, 15–18 Oct 2026)<br/>
-by Solai ([@redwing-381](https://github.com/redwing-381)) · Shoban ([@shobanravichandran](https://github.com/shobanravichandran)) · Sakthi ([@ShakthiSundar-K](https://github.com/ShakthiSundar-K))
+by Solai ([@redwing-381](https://github.com/redwing-381)) · Shoban ([@shobanravichandran](https://github.com/shobanravichandran))
 
 </div>
 

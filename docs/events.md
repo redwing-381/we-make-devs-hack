@@ -1,6 +1,6 @@
 # Events and API payloads (contract)
 
-> **Contract file.** If you change it, say so in the PR description and ping the other two owners.
+> **Contract file.** If you change it, say so in the PR description and ping the other owner.
 > Code mirrors: `whygraph/models/events.py` (pydantic, the source of truth) and `ui/src/types/events.ts`.
 > `tests/test_events_contract.py` validates the replay fixtures against these models.
 
