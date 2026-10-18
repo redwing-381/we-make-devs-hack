@@ -5,22 +5,22 @@ import { mergeGraphs } from "../api/client";
 import type { Subgraph } from "../types/events";
 
 export const LABEL_COLORS: Record<string, string> = {
-  Service: "#3b82f6",
-  Alert: "#ef4444",
-  Incident: "#ec4899",
-  Commit: "#f59e0b",
-  PR: "#a855f7",
-  Engineer: "#22c55e",
-  ConfigKey: "#eab308",
-  Deploy: "#14b8a6",
-  Topic: "#06b6d4",
-  Team: "#84cc16",
-  Feature: "#94a3b8",
-  Lesson: "#f97316",
-  Decision: "#8b5cf6",
-  Detector: "#0ea5e9",
-  Runbook: "#64748b",
-  FailurePattern: "#d946ef",
+  Service: "#6f9fd0",
+  Alert: "#d9695a",
+  Incident: "#cf6f8a",
+  Commit: "#d39a52",
+  PR: "#a88bc9",
+  Engineer: "#73b384",
+  ConfigKey: "#e6d34e",
+  Deploy: "#5fb0a6",
+  Topic: "#5aa9bf",
+  Team: "#9cb865",
+  Feature: "#8e9893",
+  Lesson: "#e08a5e",
+  Decision: "#b58fd0",
+  Detector: "#64a6cf",
+  Runbook: "#7f8a86",
+  FailurePattern: "#c97fb8",
 };
 
 interface Props {
@@ -52,8 +52,8 @@ export function GraphCanvas({ graph, highlight, height = 460 }: Props) {
     el.setConfig({
       captionsKeys: ["name"],
       layoutMode: "force",
-      backgroundColor: cssVar("--surface", "#ffffff"),
-      foregroundColor: cssVar("--text", "#1d1d1b"),
+      backgroundColor: cssVar("--sunk", "#0b0d0c"),
+      foregroundColor: cssVar("--ink", "#e8ece9"),
       simulation: { chargeStrength: -260 },
       interaction: { zoomToFitMaxZoom: 4 },
       largeGraph: { enabled: false }, // our graphs are small; keep labels at every zoom level
@@ -84,7 +84,7 @@ export function GraphCanvas({ graph, highlight, height = 460 }: Props) {
         relationship: r.type,
         source: numeric.get(r.src)!,
         target: numeric.get(r.dst)!,
-        color: "#9ca3af",
+        color: cssVar("--edge", "#59625d"),
         visible: true,
         data: { sid: r.id, ...r.props },
       }));
@@ -125,8 +125,14 @@ export function GraphCanvas({ graph, highlight, height = 460 }: Props) {
   return (
     <div className="canvas">
       <div className="canvas-meta">
-        {all.nodes.length} nodes · {all.rels.length} edges
-        {highlight && highlight.nodes.length > 0 ? ` · highlighting ${highlight.nodes.length} nodes` : ""}
+        <span className="num">
+          {all.nodes.length} nodes · {all.rels.length} edges
+        </span>
+        {highlight && highlight.nodes.length > 0 ? (
+          <span className="hi">Evidence path: {highlight.nodes.length} nodes</span>
+        ) : (
+          <span>Pick a finding or a source to light up its path</span>
+        )}
       </div>
       <div ref={host} className="canvas-host" style={{ height }} />
       <div className="legend">

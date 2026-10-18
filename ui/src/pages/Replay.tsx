@@ -17,9 +17,13 @@ export function ReplayPage() {
 
   return (
     <div>
+      <header className="page-head">
+        <h1>Replay a recorded investigation</h1>
+        <p>Every live run is recorded event by event. Replays use the same stream format, so they look exactly like the real thing.</p>
+      </header>
       <div className="picker">
         <label>
-          Recording{" "}
+          Recording
           <select value={name} onChange={(e) => (setName(e.target.value), setPlaying(false))}>
             {names.map((n) => (
               <option key={n}>{n}</option>
@@ -27,7 +31,7 @@ export function ReplayPage() {
           </select>
         </label>
         <label>
-          Speed{" "}
+          Speed
           <select value={speed} onChange={(e) => (setSpeed(Number(e.target.value)), setPlaying(false))}>
             {[1, 2, 4].map((s) => (
               <option key={s} value={s}>

@@ -61,10 +61,20 @@ export function IncidentView({ url, incidentId, graph }: Props) {
   return (
     <div className="incident">
       <header className="incident-head">
-        <h2>{opened ? `${opened.incident_id} · ${incident.title ?? ""}` : "Waiting for the incident…"}</h2>
-        {incident.severity && <span className="badge sev">{incident.severity}</span>}
-        {opened?.payload.graph_only === true && <span className="badge">graph-only</span>}
-        <span className="muted">{done ? "investigation complete" : `${events.length} events`}</span>
+        <h2>
+          {opened ? (
+            <>
+              <span className="id">{opened.incident_id}</span> {incident.title ?? ""}
+            </>
+          ) : (
+            "Waiting for the incident"
+          )}
+        </h2>
+        {incident.severity && <span className="flag sev">{incident.severity}</span>}
+        {opened?.payload.graph_only === true && <span className="flag">Graph-only</span>}
+        <span className={done ? "meta" : "meta working"}>
+          {done ? `Investigation complete · ${findings.length} grounded findings` : `Agents working · ${events.length} events`}
+        </span>
         <span className="spacer" />
         <button
           onClick={() => {
@@ -95,8 +105,8 @@ export function IncidentView({ url, incidentId, graph }: Props) {
           ))}
           {incidentId && done && rootCause && !resolvedEvent && !(resolved && "lesson" in resolved) && (
             <section className="confirm">
-              <h4>Confirm root cause + fix</h4>
-              <p className="muted">Confirming turns this incident into a lesson and a detector.</p>
+              <h4>Confirm the root cause and the fix</h4>
+              <p className="muted">Memory turns this incident into a lesson and a stored detector, so the next PR that repeats it is caught.</p>
               <input
                 value={fix}
                 onChange={(e) => setFix(e.target.value)}
@@ -110,7 +120,7 @@ export function IncidentView({ url, incidentId, graph }: Props) {
           )}
           {(lesson || (resolved && "lesson_pending" in resolved && resolved.lesson_pending)) && (
             <section className="lesson-banner">
-              <h4>Memory written</h4>
+              <h4>Learned</h4>
               {lesson ? (
                 <>
                   <p>
