@@ -1,6 +1,6 @@
-"""astro-mini simulator: the deployer and watcher for the live demo, with no shop to run.
+"""astro-shop simulator: the deployer and watcher for the live demo, with no shop to run.
 
-It watches `main` of the astro-mini repo. On every merge it:
+It watches `main` of the astro-shop repo. On every merge it:
   1. sends Why-Graph a real deploy: the merge sha, PR number, author and the real `config/services.yaml` diff;
   2. recomputes the shop from that config: each service's p99 is its own simulated latency plus its sync
      dependencies', and a call whose timeout is below the callee's p99 now fails;
@@ -9,7 +9,7 @@ It watches `main` of the astro-mini repo. On every merge it:
 
 Everything Why-Graph receives is real except the traffic itself. Usage (with the API running):
 
-    uv run python scenarios/astro_sim.py                      # watches redwing-381/astro-mini
+    uv run python scenarios/astro_sim.py                      # watches redwing-381/astro-shop
     uv run python scenarios/astro_sim.py --api https://...    # or a remote Why-Graph
 """
 
@@ -172,8 +172,8 @@ def merge_meta(repo: str, repo_dir: Path, sha: str, token: str | None) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--api", default="http://localhost:8000")
-    ap.add_argument("--repo", default="redwing-381/astro-mini")
-    ap.add_argument("--dir", default=str(REPO_ROOT / "data" / "astro-mini"))
+    ap.add_argument("--repo", default="redwing-381/astro-shop")
+    ap.add_argument("--dir", default=str(REPO_ROOT / "data" / "astro-shop"))
     ap.add_argument("--poll", type=float, default=5.0, help="seconds between git fetches")
     ap.add_argument("--alert-after", type=float, default=20.0, help="seconds of failure before alerting")
     args = ap.parse_args()

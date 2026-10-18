@@ -1,6 +1,6 @@
 # The demo's SDE team in Band
 
-Four Band agents play the AI engineering team that ships to **astro-mini**: a coordinator, an engineer, a reviewer
+Four Band agents play the AI engineering team that ships to **astro-shop**: a coordinator, an engineer, a reviewer
 and an analyst. Why-Graph watches what they ship, works out why production broke, and the **reviewer** consults
 Why-Graph's memory before approving anything. That's the whole pitch in one loop:
 
@@ -8,7 +8,7 @@ Why-Graph's memory before approving anything. That's the whole pitch in one loop
 you ──task──▶ Coordinator ──assigns──▶ Engineer ──PR──▶ Reviewer ──check_change_risk──▶ Why-Graph (MCP)
                   ▲                                         │ approve / request changes
                   │ incident_report (root cause, commit)    ▼
-              Why-Graph ◀──alerts, deploys── astro-mini ◀──merge── Coordinator
+              Why-Graph ◀──alerts, deploys── astro-shop ◀──merge── Coordinator
                   │
                   └─ Analyst asks why_is / who_knows / incident_report → post-incident note with sources
 ```
@@ -28,12 +28,12 @@ Never write task prompts that ask an agent to create a bug. The mistake has to c
 
 | | What | Notes |
 |---|---|---|
-| 1 | `redwing-381/astro-mini` repo | The demo app (Sakthi). Its `config/services.yaml` is exactly `docs/work-split.md` §2 |
-| 2 | A GitHub account for the Band agents, with write access to astro-mini | End its username with `bot` (e.g. `whygraph-coder-bot`) so Why-Graph records it as `Engineer {kind: 'agent'}` |
+| 1 | `redwing-381/astro-shop` repo | The demo app (Sakthi). Its `config/services.yaml` is exactly `docs/work-split.md` §2 |
+| 2 | A GitHub account for the Band agents, with write access to astro-shop | End its username with `bot` (e.g. `whygraph-coder-bot`) so Why-Graph records it as `Engineer {kind: 'agent'}` |
 | 3 | Why-Graph running | `make db`, then `uv run python -m seed.load`, then `make api` |
-| 4 | PR Guard | `GITHUB_TOKEN` (astro-mini only: PRs read, issues read/write, contents read) and `GITHUB_REPO=redwing-381/astro-mini` in `.env` |
+| 4 | PR Guard | `GITHUB_TOKEN` (astro-shop only: PRs read, issues read/write, contents read) and `GITHUB_REPO=redwing-381/astro-shop` in `.env` |
 | 5 | MCP for each Band agent | URL `http://localhost:8000/mcp/`; header `Authorization: Bearer <WHYGRAPH_API_TOKEN from .env>`. If Band runs in the cloud, expose the API first (`ngrok http 8000`, then use `https://<id>.ngrok.app/mcp/`) |
-| 6 | The astro-mini simulator running | `uv run python scenarios/astro_sim.py`. It watches `main`, sends a deploy with the real config diff for each merge, and raises alerts when a timeout drops below the callee's p99. Without it, run `uv run python scenarios/inject.py act1` after the merge |
+| 6 | The astro-shop simulator running | `uv run python scenarios/astro_sim.py`. It watches `main`, sends a deploy with the real config diff for each merge, and raises alerts when a timeout drops below the callee's p99. Without it, run `uv run python scenarios/inject.py act1` after the merge |
 
 ### Live run, step by step (one laptop, Band in the cloud)
 
@@ -55,7 +55,7 @@ They're described in `scenarios/sde-agent-kit.md`.
 ## 2. Team charter (paste into every agent, above its role prompt)
 
 > You are part of a four-agent engineering team (coordinator, engineer, reviewer, analyst) that maintains
-> astro-mini, a small online shop in the GitHub repo `redwing-381/astro-mini`. Services and their timeouts live in
+> astro-shop, a small online shop in the GitHub repo `redwing-381/astro-shop`. Services and their timeouts live in
 > `config/services.yaml`. Work only through GitHub (branches, pull requests, PR comments) and the `why-graph`
 > tools. Never force-push, never push to `main` directly, and never change files outside the task. Keep messages
 > short and factual. When a `why-graph` tool returns node ids, quote the relevant ones; they are the evidence.
@@ -76,7 +76,7 @@ Tools: GitHub (read PRs, merge), `why-graph`: `incident_report`.
 ### Engineer
 Tools: GitHub (branch, commit, open and update PRs).
 
-> You implement tasks in astro-mini. Make the smallest change that achieves the outcome, one pull request per
+> You implement tasks in astro-shop. Make the smallest change that achieves the outcome, one pull request per
 > task, from a fresh branch off `main`. The PR title says what changed; the body says why, and which values
 > changed from what to what. When the reviewer requests changes, update the same PR and reply to each point. If
 > the reviewer or the coordinator gives you a lesson id (like `L-1`), cite it in the PR body and say how you
@@ -162,7 +162,7 @@ Rehearse from a clean graph each time: `uv run python -m seed.load --reset`, the
 | Problem | Fallback |
 |---|---|
 | The engineer picks an odd value | Ask it for the exact value from the act (200 / 100 / 450). The story only needs the direction |
-| astro-mini didn't break, or there's no alert | `uv run python scenarios/inject.py act1` (or `act3`) replays the deploy and alerts |
+| astro-shop didn't break, or there's no alert | `uv run python scenarios/inject.py act1` (or `act3`) replays the deploy and alerts |
 | The reviewer skips the check | Remind it: "Run check_change_risk on this PR before deciding." Or show the PR Guard comment, which runs the same check |
 | A Band agent can't reach MCP | Check the URL ends in `/mcp/` and the bearer token matches `.env`. For a cloud Band, the tunnel must be up |
 | Live LLM agents are slow | Record each act separately. The Why-Graph side also runs graph-only (`GRAPH_ONLY=true`) |

@@ -1,4 +1,4 @@
-"""Replay a demo act's events without astro-mini: baseline telemetry, the bad deploy, then the alerts.
+"""Replay a demo act's events without astro-shop: baseline telemetry, the bad deploy, then the alerts.
 
     uv run python scenarios/inject.py act1              # against http://localhost:8000
     uv run python scenarios/inject.py act3 --api URL
@@ -17,8 +17,8 @@ import httpx
 
 from whygraph.models.events import AlertIn, DeployIn, TelemetryIn
 
-REPO = "redwing-381/astro-mini"
-# callee-side p99 per call edge (ms), from the latency model in astro-mini/config/services.yaml
+REPO = "redwing-381/astro-shop"
+# callee-side p99 per call edge (ms), from the latency model in astro-shop/config/services.yaml
 BASELINE = [
     ("frontend", "checkout", 700.0),
     ("frontend", "cart", 25.0),
