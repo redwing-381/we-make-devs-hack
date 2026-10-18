@@ -51,16 +51,16 @@ def memory(graph: str | None = Query(None)) -> dict:
     for label in ("Incident", "Investigation", "Finding", "Lesson", "FailurePattern", "Detector", "Runbook"):
         out = client.run(f"MATCH (n:{label}) RETURN count(n) AS n", {}, graph=g)
         counts[label] = out.rows[0]["n"] if out.rows else 0
-    c = counts[0] if counts else {}
+    c = counts
     return {
         "types": {
             "episodic": {
-                "incidents": c.get("incidents", 0),
-                "investigations": c.get("investigations", 0),
-                "findings": c.get("findings", 0),
+                "incidents": c["Incident"],
+                "investigations": c["Investigation"],
+                "findings": c["Finding"],
             },
-            "semantic": {"lessons": c.get("lessons", 0), "patterns": c.get("patterns", 0)},
-            "procedural": {"detectors": c.get("detectors", 0), "runbooks": c.get("runbooks", 0)},
+            "semantic": {"lessons": c["Lesson"], "patterns": c["FailurePattern"]},
+            "procedural": {"detectors": c["Detector"], "runbooks": c["Runbook"]},
         },
         "lessons": lessons,
         "detectors": detectors,
