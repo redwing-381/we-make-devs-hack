@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { api, type MemoryState } from "../api/client";
 
 const TYPES: { key: "episodic" | "semantic" | "procedural"; title: string; what: string }[] = [
-  { key: "episodic", title: "Episodic", what: "what happened: incidents, investigations, grounded findings" },
-  { key: "semantic", title: "Semantic", what: "what it means: lessons and failure patterns" },
-  { key: "procedural", title: "Procedural", what: "what to do: detectors (stored Cypher) and runbooks" },
+  { key: "episodic", title: "Episodic", what: "What happened: incidents, investigations and grounded findings." },
+  { key: "semantic", title: "Semantic", what: "What it means: lessons and failure patterns." },
+  { key: "procedural", title: "Procedural", what: "What to do: detectors (stored Cypher) and runbooks." },
 ];
 
 export function MemoryPage() {
@@ -27,9 +27,13 @@ export function MemoryPage() {
   const live = mem.lessons.filter((l) => l.source === "live");
   return (
     <div className="page">
-      <h2>
-        Memory <button onClick={load}>Refresh</button>
-      </h2>
+      <header className="page-head">
+        <h1>What the graph has learned</h1>
+        <button onClick={load}>Refresh</button>
+        <p>
+          Three kinds of memory, all in FalkorDB. Restart the API or the agents and none of it is lost.
+        </p>
+      </header>
       <div className="types">
         {TYPES.map((t) => (
           <section key={t.key} className="type-card">
@@ -45,7 +49,8 @@ export function MemoryPage() {
           </section>
         ))}
       </div>
-      <h3>Lessons {live.length > 0 && <span className="badge">{live.length} learned live</span>}</h3>
+      <h3>Lessons {live.length > 0 && <span className="flag live">{live.length} learned live</span>}</h3>
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -62,7 +67,7 @@ export function MemoryPage() {
             <tr key={l.id} className={l.source === "live" ? "live" : l.status === "superseded" ? "faded" : ""}>
               <td>
                 <strong>{l.id.replace("lesson:", "")}</strong> {l.text}
-                {l.status === "superseded" && <span className="badge">superseded</span>}
+                {l.status === "superseded" && <span className="flag">Superseded</span>}
               </td>
               <td>{l.incident?.replace("inc:", "")}</td>
               <td>
@@ -75,7 +80,7 @@ export function MemoryPage() {
               <td>{l.prevented ?? 0}</td>
               <td>
                 {l.outcomes.map((o) => (
-                  <span key={`${o.pr}${o.outcome}`} className={`badge outcome-${o.outcome.toLowerCase()}`}>
+                  <span key={`${o.pr}${o.outcome}`} className={`flag outcome-${o.outcome.toLowerCase()}`}>
                     #{o.pr} {o.outcome.toLowerCase().replace("_with", "")}
                   </span>
                 ))}
@@ -84,7 +89,9 @@ export function MemoryPage() {
           ))}
         </tbody>
       </table>
+      </div>
       <h3>Detectors</h3>
+      <div className="table-wrap">
       <table>
         <thead>
           <tr>
@@ -104,7 +111,7 @@ export function MemoryPage() {
               <td>{d.backtest_total != null ? `${d.backtest_hits}/${d.backtest_total} past changes` : "n/a"}</td>
               <td>
                 <details>
-                  <summary>show</summary>
+                  <summary>Show Cypher</summary>
                   <pre>{d.cypher}</pre>
                 </details>
               </td>
@@ -112,6 +119,7 @@ export function MemoryPage() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

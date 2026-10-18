@@ -12,9 +12,8 @@ function Verdict({ title, res }: { title: string; res: ChangeRiskResponse | null
   if (!res) return null;
   return (
     <section className={`verdict risk-${res.risk}`}>
-      <h4>
-        {title} <span className={`badge risk-${res.risk}`}>{res.risk} risk</span>
-      </h4>
+      <h4>{title}</h4>
+      <div className="big">{res.risk === "none" ? "No known risk" : `${res.risk[0].toUpperCase()}${res.risk.slice(1)} risk`}</div>
       <p>{res.advice}</p>
       {res.warnings.length > 0 && (
         <table>
@@ -81,11 +80,13 @@ export function PRGuardPage() {
 
   return (
     <div className="page">
-      <h2>PR Guard</h2>
-      <p className="muted">
-        The check our SDE agents run over MCP (<code>check_change_risk</code>) before a PR: every stored detector and
-        lesson against the proposed change.
-      </p>
+      <header className="page-head">
+        <h1>Check a change before it ships</h1>
+        <p>
+          The same check coding agents run over MCP (<code>check_change_risk</code>) before they open a PR. Every
+          stored detector and lesson is tested against the proposed change.
+        </p>
+      </header>
       <div className="presets">
         {PRESETS.map((p) => (
           <button key={p.label} onClick={() => setChange(p.change)}>
@@ -94,24 +95,25 @@ export function PRGuardPage() {
         ))}
       </div>
       <div className="form-row">
-        <label>service {field("service")}</label>
-        <label>key {field("key")}</label>
-        <label>old {field("old")}</label>
-        <label>new {field("new")}</label>
+        <label>Service {field("service")}</label>
+        <label>Key {field("key")}</label>
+        <label>Current {field("old")}</label>
+        <label>Proposed {field("new")}</label>
         <button className="primary" onClick={() => check(false)}>
           Check
         </button>
-        <button onClick={() => check(true)}>A/B: learned vs fresh tenant</button>
+        <button onClick={() => check(true)}>Compare with a fresh graph</button>
       </div>
       {error && <p className="error">{error}</p>}
       <div className={fresh ? "ab" : ""}>
-        <Verdict title="whygraph_demo (learned)" res={demo} />
-        <Verdict title="whygraph_fresh (never learned)" res={fresh} />
+        <Verdict title="whygraph_demo, the graph that learned" res={demo} />
+        <Verdict title="whygraph_fresh, same code, never learned" res={fresh} />
       </div>
-      <h3>PRs seen by the guard</h3>
+      <h3>Pull requests the guard has seen</h3>
       {prs.length === 0 ? (
-        <p className="muted">No PRs yet. They appear once PR Guard or an MCP check sees them.</p>
+        <p className="empty">No pull requests yet. They show up here once PR Guard or an agent's MCP check sees one.</p>
       ) : (
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -126,12 +128,12 @@ export function PRGuardPage() {
               <tr key={p.number}>
                 <td>{p.url ? <a href={p.url}>#{p.number}</a> : `#${p.number}`} {p.title}</td>
                 <td>
-                  {p.author} {p.author_kind === "agent" && <span className="badge">agent</span>}
+                  {p.author} {p.author_kind === "agent" && <span className="flag">agent</span>}
                 </td>
                 <td>{p.state}</td>
                 <td>
                   {p.outcomes.map((o) => (
-                    <span key={o.lesson + o.outcome} className={`badge outcome-${o.outcome.toLowerCase()}`}>
+                    <span key={o.lesson + o.outcome} className={`flag outcome-${o.outcome.toLowerCase()}`}>
                       {o.lesson.replace("lesson:", "")} {o.outcome.toLowerCase().replace("_with", "")}
                     </span>
                   ))}
@@ -140,6 +142,7 @@ export function PRGuardPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

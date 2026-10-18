@@ -42,17 +42,20 @@ export function IncidentPage() {
     <div>
       <div className="picker">
         <label>
-          Incident{" "}
+          Incident
           <select value={choice} onChange={(e) => setChoice(e.target.value)}>
             {incidents.map((i) => (
               <option key={i.id} value={i.id}>
                 {i.id} · {i.title} · {i.status}
               </option>
             ))}
-            <option value={FIXTURE}>Recorded Act 1 (fixture)</option>
+            <option value={FIXTURE}>Recorded run: Act 1 (fixture)</option>
           </select>
         </label>
-        {offline && <span className="muted">FalkorDB/API unreachable: showing the recording</span>}
+        {offline && <span className="muted">The API is unreachable, so this is the recording</span>}
+        {!offline && incidents.length === 0 && (
+          <span className="muted">No live incident yet. Merge a change and alerts open one here.</span>
+        )}
       </div>
       <IncidentView
         key={choice}

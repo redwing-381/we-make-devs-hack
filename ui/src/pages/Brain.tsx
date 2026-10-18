@@ -40,7 +40,10 @@ export function BrainPage() {
 
   return (
     <div className="page">
-      <h2>Company Brain</h2>
+      <header className="page-head">
+        <h1>Ask the company brain</h1>
+        <p>People, ownership, changes, decisions and runbooks sit in one graph. Every answer cites the nodes it came from.</p>
+      </header>
       <div className="presets">
         {EXAMPLES.map((q) => (
           <button key={q} onClick={() => ask(q)}>
@@ -48,20 +51,20 @@ export function BrainPage() {
           </button>
         ))}
       </div>
-      <div className="form-row">
+      <div className="ask-row">
         <input className="wide" value={question} onChange={(e) => setQuestion(e.target.value)} onKeyDown={(e) => e.key === "Enter" && ask()} />
         <label className="check">
-          <input type="checkbox" checked={graphOnly} onChange={(e) => setGraphOnly(e.target.checked)} /> graph-only
+          <input type="checkbox" checked={graphOnly} onChange={(e) => setGraphOnly(e.target.checked)} /> Graph-only
         </label>
         <button className="primary" onClick={() => ask()} disabled={busy}>
-          {busy ? "Thinking…" : "Ask"}
+          {busy ? "Asking…" : "Ask"}
         </button>
       </div>
       {error && <p className="error">{error}</p>}
       {res && (
         <>
           <section className="answer">
-            <p>{res.answer}</p>
+            <p>{res.answer.split("`").map((part, i) => (i % 2 ? <code key={i}>{part}</code> : part))}</p>
             <div className="chips">
               {res.sources.map((s) => (
                 <button key={s} className={`chip ${focus === s ? "on" : ""}`} onClick={() => setFocus(focus === s ? null : s)}>
@@ -70,7 +73,7 @@ export function BrainPage() {
               ))}
             </div>
             <p className="muted">
-              {res.graph_only ? "graph-only answer" : "LLM answer, every fact grounded"} · {res.steps.length} queries:{" "}
+              {res.graph_only ? "Graph-only answer" : "Written by Claude from grounded facts"} · {res.steps.length} queries:{" "}
               {res.steps.map((s) => s.query_id).join(", ")}
             </p>
           </section>

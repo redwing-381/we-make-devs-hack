@@ -11,10 +11,10 @@ export function AgentLanes({ events }: { events: AgentEvent[] }) {
         const done = [...mine].reverse().find((e) => e.type === "agent.done");
         const running = mine.length > 0 && !done;
         return (
-          <section key={agent} className={`lane ${running ? "running" : ""}`}>
+          <section key={agent} className={`lane agent-${agent} ${running ? "running" : done ? "done" : ""}`}>
             <h3>
               <span className={`agent agent-${agent}`}>{agent}</span>
-              <span className="lane-state">{done ? "done" : running ? "working…" : "waiting"}</span>
+              <span className="lane-state">{done ? "Done" : running ? "Working" : "Waiting"}</span>
             </h3>
             {mine
               .filter((e) => e.type === "agent.step")
