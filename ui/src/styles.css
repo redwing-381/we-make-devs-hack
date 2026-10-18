@@ -118,7 +118,7 @@ a:hover { background: color-mix(in srgb, var(--mark) 35%, transparent); }
 .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .status.down i { background: var(--danger); }
 
-main { padding: 12px 32px 96px; max-width: 1440px; margin: 0 auto; }
+main { padding: 12px 32px 32px; max-width: 1440px; margin: 0 auto; }
 @media (max-width: 720px) {
   .topbar { padding: 0 16px; gap: 8px; }
   .status { margin-left: 0; width: 100%; padding-bottom: 8px; }
@@ -232,11 +232,13 @@ input.wide { flex: 1; min-width: 260px; font-size: 16px; padding: 12px 14px; }
 .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 
 .findings { display: flex; flex-direction: column; gap: 8px; }
-/* beside the graph the findings scroll on their own, as tall as the graph panel, and stay in view
-   while the Cypher drawer opens below the canvas */
+/* beside the graph the findings scroll on their own and end exactly where the graph side ends:
+   size containment keeps them from stretching the row, so the row is as tall as the graph (and the
+   Cypher drawer when it is open) and the findings fill it */
 @media (min-width: 1001px) {
-  .findings { position: sticky; top: 72px; max-height: min(564px, calc(100dvh - 92px)); overflow-y: auto;
-    overscroll-behavior: contain; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--step) transparent; }
+  .incident-body { align-items: stretch; }
+  .findings { contain: size; overflow-y: auto; overscroll-behavior: contain; padding-right: 6px;
+    scrollbar-width: thin; scrollbar-color: var(--step) transparent; }
   .findings::-webkit-scrollbar { width: 6px; }
   .findings::-webkit-scrollbar-thumb { background: var(--step); border-radius: 3px; }
   .findings > * { flex-shrink: 0; }
