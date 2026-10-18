@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Why-Graph architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root { --ground:#101312; --raised:#171b19; --sunk:#0b0d0c; --step:#222825; --ink:#e8ece9; --ink2:#a5aea9; --ink3:#6f7974;
+    --mark:#e6d34e; --on:#121410; --ok:#7fbf8d; --mem:#79aadd; --ease:cubic-bezier(.2,.7,.2,1); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ground); color: var(--ink); font-family: "Geist", system-ui, sans-serif; }
+  main { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 22px 32px; gap: 14px; }
+  header { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: clamp(26px, 3vw, 40px); letter-spacing: -0.035em; font-weight: 650; }
+  h1 mark { background: var(--mark); color: var(--on); padding: 0 6px; border-radius: 2px; }
+  header p { margin: 0; color: var(--ink2); font-size: 17px; }
+
+  .bar { display: flex; align-items: center; gap: 16px; min-height: 64px; flex-wrap: wrap; }
+  .caption { flex: 1; min-width: 300px; }
+  .caption .kicker { color: var(--ink3); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .caption .say { font-size: clamp(18px, 1.6vw, 24px); font-weight: 550; letter-spacing: -0.015em; line-height: 1.3; margin-top: 2px; }
+  .caption .say b { background: var(--mark); color: var(--on); padding: 0 5px; border-radius: 2px; font-weight: 600; }
+  .ctrl { display: flex; gap: 8px; align-items: center; }
+  button { font: 600 15px "Geist", sans-serif; border: 0; border-radius: 4px; padding: 11px 18px; cursor: pointer;
+    background: var(--step); color: var(--ink); transition: background .2s var(--ease), transform .1s var(--ease); }
+  button:hover { background: #2c332f; }
+  button:active { transform: translateY(1px); }
+  button.next { background: var(--mark); color: var(--on); }
+  button.next:hover { background: #d6c443; }
+  button:disabled { opacity: .4; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+  .pips { display: flex; gap: 5px; margin-right: 6px; }
+  .pips i { width: 18px; height: 5px; border-radius: 1px; background: var(--step); transition: background .3s; }
+  .pips i.on { background: var(--mark); }
+
+  svg { width: 100%; height: auto; max-height: 76dvh; display: block; }
+  .box { fill: var(--raised); }
+  .sunk { fill: var(--sunk); }
+  .t { fill: var(--ink); font: 600 22px "Geist", sans-serif; letter-spacing: -0.01em; }
+  .s { fill: var(--ink2); font: 400 15px "Geist", sans-serif; }
+  .x { fill: var(--ink3); font: 400 13px "Geist", sans-serif; }
+  .m { fill: var(--ink); font: 500 13.5px "Geist Mono", monospace; }
+  .chip { fill: var(--step); }
+  .edge path { stroke: #59625d; stroke-width: 2; fill: none; transition: stroke .3s, stroke-width .3s; }
+  .lbl { fill: var(--ink2); font: 500 13px "Geist", sans-serif; }
+  .lblbg { fill: var(--ground); }
+  .hotlbl { fill: var(--on); font: 600 13.5px "Geist", sans-serif; }
+  .hotbg { fill: var(--mark); }
+  .dot-tri { fill: #e48d60 } .dot-cau { fill: #e07489 } .dot-mem { fill: var(--mem) } .dot-com { fill: var(--ok) }
+  .step-n { fill: var(--on); font: 700 15px "Geist", sans-serif; }
+  .flow { fill: var(--ink); font: 500 16px "Geist", sans-serif; }
+  .flowx { fill: var(--ink2); font: 400 14px "Geist", sans-serif; }
+
+  /* step mode: the active stage stays, everything else steps back */
+  .node, .edge, .card { transition: opacity .45s var(--ease); }
+  .node .frame { fill: none; stroke: var(--mark); stroke-width: 3; opacity: 0; transition: opacity .35s; }
+  svg.focus .node:not(.on), svg.focus .edge:not(.on), svg.focus .card:not(.on) { opacity: .14; }
+  svg.focus .node.on .frame { opacity: 1; }
+  svg.focus .edge.on path { stroke: var(--mark); stroke-width: 4; stroke-dasharray: 10 8; animation: flow .7s linear infinite; }
+  svg.focus .edge.on .lblbg { fill: var(--mark); }
+  svg.focus .edge.on .lbl { fill: var(--on); font-weight: 600; }
+  .card .cardbg { fill: transparent; transition: fill .3s; }
+  svg.focus .card.on .cardbg { fill: var(--step); }
+  @keyframes flow { to { stroke-dashoffset: -18; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><mark>Why</mark>-Graph</h1>
+    <p>AI agents ship the change. FalkorDB remembers why it broke. The next PR is checked before it merges.</p>
+  </header>
+
+  <div class="bar">
+    <div class="caption" aria-live="polite">
+      <div class="kicker" id="kicker">Overview</div>
+      <div class="say" id="say">Press Next to follow one change from a Band agent to a blocked PR.</div>
+    </div>
+    <div class="ctrl">
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <button id="prev" aria-label="Previous step">Back</button>
+      <button id="next" class="next">Next</button>
+    </div>
+  </div>
+
+  <svg id="d" viewBox="0 0 1600 860" role="img" aria-label="Why-Graph architecture">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#59625d"/></marker>
+      <marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e6d34e"/></marker>
+    </defs>
+
+    <g class="node" id="n-band">
+      <rect class="box" x="30" y="120" width="360" height="380" rx="10"/>
+      <rect class="frame" x="30" y="120" width="360" height="380" rx="10"/>
+      <text class="t" x="56" y="162">Band · AI engineering team</text>
+      <text class="s" x="56" y="188">room why-graph-demo · 5 Claude Code agents</text>
+      <rect class="sunk" x="56" y="210" width="308" height="44" rx="5"/><text class="m" x="74" y="238">wg-coordinator</text><text class="x" x="232" y="238">assigns, merges</text>
+      <rect class="sunk" x="56" y="262" width="308" height="44" rx="5"/><text class="m" x="74" y="290">wg-engineer</text><text class="x" x="232" y="290">writes the fix</text>
+      <rect class="sunk" x="56" y="314" width="308" height="44" rx="5"/><text class="m" x="74" y="342">wg-reviewer</text><text class="x" x="232" y="342">checks with MCP</text>
+      <rect class="sunk" x="56" y="366" width="308" height="44" rx="5"/><text class="m" x="74" y="394">wg-analyst</text><text class="x" x="232" y="394">asks the brain</text>
+      <rect class="sunk" x="56" y="418" width="308" height="44" rx="5"/><text class="m" x="74" y="446">wg-chaos</text><text class="x" x="232" y="446">makes the mistake</text>
+    </g>
+
+    <g class="node" id="n-gh">
+      <rect class="box" x="470" y="120" width="320" height="160" rx="10"/>
+      <rect class="frame" x="470" y="120" width="320" height="160" rx="10"/>
+      <text class="t" x="496" y="162">GitHub · astro-shop</text>
+      <text class="s" x="496" y="190">config/services.yaml</text>
+      <text class="s" x="496" y="214">PR → review → merge to main</text>
+      <rect class="sunk" x="496" y="232" width="268" height="30" rx="4"/>
+      <text class="m" x="508" y="252">payment timeout 800 → 200</text>
+    </g>
+
+    <g class="node" id="n-sim">
+      <rect class="box" x="470" y="340" width="320" height="160" rx="10"/>
+      <rect class="frame" x="470" y="340" width="320" height="160" rx="10"/>
+      <text class="t" x="496" y="382">astro_sim</text>
+      <text class="s" x="496" y="410">watches main, diffs the config</text>
+      <text class="s" x="496" y="434">deploys · telemetry · alerts</text>
+      <text class="x" x="496" y="470">runtime simulated from latency_ms</text>
+    </g>
+
+    <g class="node" id="n-api">
+      <rect class="box" x="870" y="120" width="400" height="380" rx="10"/>
+      <rect class="frame" x="870" y="120" width="400" height="380" rx="10"/>
+      <text class="t" x="896" y="162">Why-Graph API</text>
+      <text class="s" x="896" y="188">FastAPI · grounded agents · MCP server</text>
+      <rect class="sunk" x="896" y="206" width="348" height="168" rx="6"/>
+      <text class="x" x="914" y="232">On every incident, in this order</text>
+      <circle class="dot-tri" cx="922" cy="262" r="6"/><text class="flow" x="936" y="268">Triage</text><text class="flowx" x="1010" y="268">root alert, blast radius</text>
+      <circle class="dot-mem" cx="922" cy="294" r="6"/><text class="flow" x="936" y="300">Memory</text><text class="flowx" x="1010" y="300">seen this shape before?</text>
+      <circle class="dot-cau" cx="922" cy="326" r="6"/><text class="flow" x="936" y="332">Cause</text><text class="flowx" x="1010" y="332">guilty commit, as a path</text>
+      <circle class="dot-com" cx="922" cy="358" r="6"/><text class="flow" x="936" y="364">Comms</text><text class="flowx" x="1010" y="364">status update, pages owners</text>
+      <text class="s" x="896" y="408">Every claim cites a Cypher query and</text>
+      <text class="s" x="896" y="430">the exact nodes; it is re-run to verify.</text>
+      <text class="x" x="896" y="470">Claude writes the words. The graph decides.</text>
+    </g>
+
+    <g class="node" id="n-db">
+      <rect class="box" x="1350" y="120" width="222" height="380" rx="10"/>
+      <rect class="frame" x="1350" y="120" width="222" height="380" rx="10"/>
+      <text class="t" x="1374" y="162">FalkorDB</text>
+      <text class="s" x="1374" y="188">one graph per tenant</text>
+      <rect class="chip" x="1374" y="210" width="174" height="62" rx="5"/>
+      <text class="flow" x="1388" y="236">Episodic</text><text class="x" x="1388" y="258">incidents, findings</text>
+      <rect class="chip" x="1374" y="282" width="174" height="62" rx="5"/>
+      <text class="flow" x="1388" y="308">Semantic</text><text class="x" x="1388" y="330">lessons, vectors</text>
+      <rect class="chip" x="1374" y="354" width="174" height="62" rx="5"/>
+      <text class="flow" x="1388" y="380">Procedural</text><text class="x" x="1388" y="402">detectors = Cypher</text>
+      <text class="x" x="1374" y="446">services · people · PRs</text>
+      <text class="x" x="1374" y="468">commits · config · runbooks</text>
+    </g>
+
+    <g class="node" id="n-ui">
+      <rect class="box" x="870" y="560" width="702" height="110" rx="10"/>
+      <rect class="frame" x="870" y="560" width="702" height="110" rx="10"/>
+      <text class="t" x="896" y="602">Console · why-graph.vercel.app</text>
+      <text class="s" x="896" y="632">Incident (live agents, evidence path, Run live) · PR Guard · Memory · Brain · Adopt it</text>
+      <text class="x" x="896" y="654">React + @falkordb/canvas, streamed over SSE</text>
+    </g>
+
+    <g class="edge" id="e-pr">
+      <path d="M390 200 H470" marker-end="url(#a)"/>
+      <rect class="lblbg" x="396" y="176" width="68" height="20" rx="2"/><text class="lbl" x="402" y="191">opens PR</text>
+    </g>
+    <g class="edge" id="e-merge">
+      <path d="M630 280 V340" marker-end="url(#a)"/>
+      <rect class="lblbg" x="640" y="299" width="72" height="20" rx="2"/><text class="lbl" x="646" y="314">on merge</text>
+    </g>
+    <g class="edge" id="e-post">
+      <path d="M790 420 H830 V320 H870" marker-end="url(#a)"/>
+      <rect class="lblbg" x="794" y="437" width="160" height="20" rx="2"/><text class="lbl" x="800" y="452">deploy · telemetry · alerts</text>
+    </g>
+    <g class="edge" id="e-db">
+      <path d="M1270 310 H1350" marker-end="url(#a)" marker-start="url(#a)"/>
+      <rect class="lblbg" x="1278" y="283" width="64" height="20" rx="2"/><text class="lbl" x="1284" y="298">Cypher</text>
+    </g>
+    <g class="edge" id="e-ui">
+      <path d="M1070 500 V560" marker-end="url(#a)" marker-start="url(#a)"/>
+      <rect class="lblbg" x="1080" y="519" width="190" height="20" rx="2"/><text class="lbl" x="1086" y="534">live stream · confirm the fix</text>
+    </g>
+    <g class="edge" id="e-mcp">
+      <path d="M1070 120 V70 H210 V120" marker-end="url(#a)" style="stroke:#e6d34e;stroke-width:4"/>
+      <rect class="hotbg" x="470" y="56" width="440" height="28" rx="3"/>
+      <text class="hotlbl" x="484" y="75">MCP · check_change_risk · incident_report · why_is · who_knows</text>
+    </g>
+
+    <g transform="translate(30 730)">
+      <rect class="box" x="0" y="0" width="1542" height="100" rx="10"/>
+      <g class="card" id="c1" transform="translate(12 12)">
+        <rect class="cardbg" x="0" y="0" width="296" height="76" rx="6"/>
+        <g transform="translate(14 18)"><rect class="hotbg" x="0" y="0" width="26" height="26" rx="3"/><text class="step-n" x="8" y="19">1</text>
+        <text class="flow" x="38" y="19">Agent ships a bad timeout</text><text class="flowx" x="38" y="44">PR #1, merged</text></g>
+      </g>
+      <g class="card" id="c2" transform="translate(316 12)">
+        <rect class="cardbg" x="0" y="0" width="296" height="76" rx="6"/>
+        <g transform="translate(14 18)"><rect class="hotbg" x="0" y="0" width="26" height="26" rx="3"/><text class="step-n" x="8" y="19">2</text>
+        <text class="flow" x="38" y="19">Checkout fails, alerts fire</text><text class="flowx" x="38" y="44">INC-1031 opens</text></g>
+      </g>
+      <g class="card" id="c3" transform="translate(620 12)">
+        <rect class="cardbg" x="0" y="0" width="296" height="76" rx="6"/>
+        <g transform="translate(14 18)"><rect class="hotbg" x="0" y="0" width="26" height="26" rx="3"/><text class="step-n" x="8" y="19">3</text>
+        <text class="flow" x="38" y="19">Agents prove the cause</text><text class="flowx" x="38" y="44">commit → config → payment p99</text></g>
+      </g>
+      <g class="card" id="c4" transform="translate(924 12)">
+        <rect class="cardbg" x="0" y="0" width="296" height="76" rx="6"/>
+        <g transform="translate(14 18)"><rect class="hotbg" x="0" y="0" width="26" height="26" rx="3"/><text class="step-n" x="8" y="19">4</text>
+        <text class="flow" x="38" y="19">Human confirms, graph learns</text><text class="flowx" x="38" y="44">lesson L-1 + detector D-1</text></g>
+      </g>
+      <g class="card" id="c5" transform="translate(1228 12)">
+        <rect class="cardbg" x="0" y="0" width="302" height="76" rx="6"/>
+        <g transform="translate(14 18)"><rect class="hotbg" x="0" y="0" width="26" height="26" rx="3"/><text class="step-n" x="8" y="19">5</text>
+        <text class="flow" x="38" y="19">Next PR is blocked</text><text class="flowx" x="38" y="44">safe value ≥ 453 ms</text></g>
+      </g>
+    </g>
+  </svg>
+</main>
+
+<script>
+  // one stage of the data flow per step: what lights up, and the line to say over it
+  const STEPS = [
+    { on: [], say: "Press Next to follow one change from a Band agent to a blocked PR.", kicker: "Overview" },
+    { on: ["n-band", "e-pr", "n-gh", "c1"],
+      say: "A Band agent is asked to cut checkout latency. It opens <b>PR #1</b>: payment timeout 800 → 200 ms." },
+    { on: ["n-gh", "e-merge", "n-sim", "c1"],
+      say: "The PR is merged. The simulator sees the new commit on main and diffs <b>services.yaml</b>." },
+    { on: ["n-sim", "e-post", "n-api", "c2"],
+      say: "It posts the deploy and live latencies. Checkout fails at 62%, the alerts open <b>INC-1031</b>." },
+    { on: ["n-api", "e-db", "n-db", "c3"],
+      say: "Four agents investigate on one FalkorDB graph. Every claim is a <b>Cypher path</b>, re-run to verify." },
+    { on: ["n-api", "e-ui", "n-ui", "c3"],
+      say: "The console streams each finding live and lights up its <b>evidence path</b>. Run live re-executes it." },
+    { on: ["n-ui", "e-ui", "n-api", "e-db", "n-db", "c4"],
+      say: "A human confirms the fix. The graph writes <b>lesson L-1</b> and <b>detector D-1</b>, stored as Cypher." },
+    { on: ["n-api", "e-mcp", "n-band", "c5"],
+      say: "Next time an agent tries the same mistake, <b>check_change_risk</b> over MCP blocks it: at least 453 ms." },
+  ];
+  const svg = document.getElementById("d");
+  const say = document.getElementById("say");
+  const kicker = document.getElementById("kicker");
+  const prev = document.getElementById("prev");
+  const next = document.getElementById("next");
+  const pips = document.getElementById("pips");
+  STEPS.slice(1).forEach(() => pips.appendChild(document.createElement("i")));
+  let i = Number(new URLSearchParams(location.search).get("step") || 0);
+
+  function show() {
+    const s = STEPS[i];
+    svg.classList.toggle("focus", s.on.length > 0);
+    svg.querySelectorAll(".node, .edge, .card").forEach((el) => el.classList.toggle("on", s.on.includes(el.id)));
+    say.innerHTML = s.say;
+    kicker.textContent = s.kicker ?? `Step ${i} of ${STEPS.length - 1}`;
+    [...pips.children].forEach((p, k) => p.classList.toggle("on", k < i));
+    prev.disabled = i === 0;
+    next.textContent = i === STEPS.length - 1 ? "Start over" : i === 0 ? "Start" : "Next";
+  }
+  next.onclick = () => { i = i === STEPS.length - 1 ? 0 : i + 1; show(); };
+  prev.onclick = () => { if (i > 0) { i -= 1; show(); } };
+  addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") { e.preventDefault(); next.click(); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); prev.click(); }
+  });
+  show();
+</script>
+</body>
+</html>
